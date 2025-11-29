@@ -20,6 +20,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "API_URL": "https://healthcare-app-2-apt4.onrender.com"
     }
   }
 }
