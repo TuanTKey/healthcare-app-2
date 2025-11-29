@@ -16,11 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.tuantkey.healthcaresystemmain",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
-      }
+      "package": "com.tuantkey.healthcaresystemmain"
     },
     "web": {
       "favicon": "./assets/favicon.png"
