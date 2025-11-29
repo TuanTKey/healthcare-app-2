@@ -1,0 +1,14 @@
+node_modules/
+*.log
+.env
+.env.local
+.DS_Store
+.expo/
+.expo-shared/
+dist/
+build/
+.cache/
+*.swp
+*.swo
+*~
+.vscode/settings.json
