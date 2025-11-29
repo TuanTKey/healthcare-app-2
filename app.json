@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "06e3ec9d-c82b-48d8-92a0-e9800b490c37"
+      }
+    },
+    "android": {
+      "package": "com.tuantkey.healthcaresystemmain"
+    }
+  }
+}
