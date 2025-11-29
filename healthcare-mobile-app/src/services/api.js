@@ -2,8 +2,8 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Backend API configuration
-// Your PC IP on WiFi network: 192.168.1.3
-const BASE_URL = 'http://192.168.1.3:5000/api';
+// Render deployment URL
+const BASE_URL = 'https://healthcare-app-2-apt4.onrender.com/api';
 
 // Create axios instance
 const api = axios.create({
