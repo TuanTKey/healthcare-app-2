@@ -16,13 +16,16 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.healthcare.mobileapp"
+      "package": "com.tuantkey.healthcaresystemmain"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "API_URL": "https://your-backend.onrender.com"
+      "API_URL": "https://healthcare-app-2-apt4.onrender.com",
+      "eas": {
+        "projectId": "f356537b-2bdd-434f-918e-618009ec142b"
+      }
     }
   }
 }
