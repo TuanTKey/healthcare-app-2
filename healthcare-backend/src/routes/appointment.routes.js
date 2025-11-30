@@ -81,7 +81,7 @@ router.get(
 // 🎯 THỐNG KÊ HỒ SƠ BỆNH ÁN
 router.get(
   '/stats/overview',
-  requireRole(ROLES.DOCTOR, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD),
+  requireRole(ROLES.DOCTOR, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS['REPORT.VIEW']),
   validateQuery(medicalRecordValidation.getStats),
   medicalRecordController.getMedicalRecordsStats
@@ -214,7 +214,7 @@ router.post(
 // 🎯 LẤY DANH SÁCH TẤT CẢ LỊCH HẸN (ADMIN DASHBOARD)
 router.get(
   '/',
-  requireRole(ROLES.HOSPITAL_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR),
+  requireRole(ROLES.HOSPITAL_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS['APPOINTMENT.VIEW']),
   validateQuery(appointmentValidation.getPatientAppointments),
   appointmentController.getAllAppointments

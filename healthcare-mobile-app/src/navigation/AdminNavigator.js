@@ -17,6 +17,14 @@ import BillDetailScreen from '../screens/admin/BillDetailScreen';
 import MedicalRecordDetailScreen from '../screens/patient/MedicalRecordDetailScreen';
 import MedicalRecordEditScreen from '../screens/patient/MedicalRecordEditScreen';
 
+// New admin management screens
+import SystemStatsScreen from '../screens/admin/SystemStatsScreen';
+import AuditLogsScreen from '../screens/admin/AuditLogsScreen';
+import LabOrdersManagementScreen from '../screens/admin/LabOrdersManagementScreen';
+import AppointmentManagementScreen from '../screens/admin/AppointmentManagementScreen';
+import RevenueStatsScreen from '../screens/admin/RevenueStatsScreen';
+import SystemHealthScreen from '../screens/admin/SystemHealthScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -102,6 +110,55 @@ const AdminDashboardStack = () => (
       name="AdminSettings" 
       component={AdminSettings}
       options={{ title: 'Cấu Hình' }}
+    />
+    {/* New Admin Management Screens */}
+    <Stack.Screen 
+      name="SystemStats"
+      component={SystemStatsScreen}
+      options={{ 
+        title: 'Thống Kê Hệ Thống',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="AuditLogs"
+      component={AuditLogsScreen}
+      options={{ 
+        title: 'Audit Logs',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="LabOrdersManagement"
+      component={LabOrdersManagementScreen}
+      options={{ 
+        title: 'Quản Lý Xét Nghiệm',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="AppointmentManagement"
+      component={AppointmentManagementScreen}
+      options={{ 
+        title: 'Quản Lý Lịch Hẹn',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="RevenueStats"
+      component={RevenueStatsScreen}
+      options={{ 
+        title: 'Thống Kê Doanh Thu',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="SystemHealth"
+      component={SystemHealthScreen}
+      options={{ 
+        title: 'Sức Khỏe Hệ Thống',
+        headerShown: true
+      }}
     />
   </Stack.Navigator>
 );
