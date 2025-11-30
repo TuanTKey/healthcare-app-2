@@ -5,10 +5,10 @@ import * as SecureStore from 'expo-secure-store';
 // Render deployment URL
 const BASE_URL = 'https://healthcare-app-2-apt4.onrender.com/api';
 
-// Create axios instance
+// Create axios instance with increased timeout for Render.com cold starts
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000, // Increased to 30 seconds for cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,6 +50,19 @@ api.interceptors.response.use(
       message: error.message,
       data: error.response?.data
     });
+    
+    // Only retry GET requests on network error (POST/PUT/DELETE should not be retried)
+    const isIdempotent = error.config?.method?.toLowerCase() === 'get';
+    if (error.message === 'Network Error' && error.config && !error.config._retry && isIdempotent) {
+      error.config._retry = true;
+      console.log(`🔄 Retrying GET request... (1 attempt left)`);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await api.request(error.config);
+      } catch (retryError) {
+        // If retry also fails, continue with normal error handling
+      }
+    }
     
     if (error.response?.status === 401) {
       await SecureStore.deleteItemAsync('authToken');

@@ -649,15 +649,6 @@ async deleteUser(userId, reason, currentUser) {
       );
     }
 
-    // 🛡️ KIỂM TRA QUYỀN XÓA ROLE CAO HƠN
-    if (ROLE_HIERARCHY.indexOf(user.role) < ROLE_HIERARCHY.indexOf(currentUser.role)) {
-      throw new AppError(
-        'Không có quyền xóa user có role cao hơn',
-        403,
-        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
-      );
-    }
-
     // 🎯 KIỂM TRA NẾU USER ĐÃ BỊ XÓA
     if (user.isDeleted) {
       throw new AppError(
@@ -667,18 +658,24 @@ async deleteUser(userId, reason, currentUser) {
       );
     }
 
-    // 🎯 THỰC HIỆN SOFT DELETE
-    user.isDeleted = true;
-    user.deletedAt = new Date();
-    user.deletedBy = currentUser._id;
-    user.deletionReason = reason;
-    user.status = 'DELETED';
-    user.isActive = false;
+    // 🎯 THỰC HIỆN SOFT DELETE - Sử dụng findByIdAndUpdate để bỏ qua validation
+    const newEmail = `deleted_${Date.now()}_${user.email}`;
     
-    // 🎯 ẨN EMAIL ĐỂ CÓ THỂ TÁI SỬ DỤNG
-    user.email = `deleted_${Date.now()}_${user.email}`;
-    
-    await user.save();
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy: currentUser._id,
+          deletionReason: reason || 'Không có lý do cụ thể',
+          status: 'DELETED',
+          isActive: false,
+          email: newEmail
+        }
+      },
+      { runValidators: false } // Bỏ qua validation khi xóa
+    );
 
     // 🎯 XÓA CÁC DỮ LIỆU LIÊN QUAN (TÙY THEO YÊU CẦU)
     await this.cleanupUserData(userId);

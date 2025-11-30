@@ -10,9 +10,11 @@ import {
   Modal,
   TextInput as RNTextInput,
   Text,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../../services/api';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
@@ -23,13 +25,16 @@ const UserManagement = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     personalInfo: {
       firstName: '',
       lastName: '',
-      dateOfBirth: '',
+      dateOfBirth: null,
       gender: 'MALE',
       phone: ''
     },
@@ -61,12 +66,55 @@ const UserManagement = ({ navigation }) => {
   const handleCreateUser = async () => {
     try {
       const { email, password, personalInfo, role } = formData;
-      if (!email || !password || !personalInfo.firstName || !personalInfo.lastName || !personalInfo.phone || !personalInfo.dateOfBirth) {
-        Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
+      
+      // Validate all required fields
+      if (!email || !password) {
+        Alert.alert('Lỗi', 'Vui lòng nhập email và mật khẩu');
+        return;
+      }
+      
+      if (password.length < 8) {
+        Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 8 ký tự');
+        return;
+      }
+      
+      if (!personalInfo.firstName || !personalInfo.lastName) {
+        Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
+        return;
+      }
+      
+      if (!personalInfo.dateOfBirth) {
+        Alert.alert('Lỗi', 'Vui lòng chọn ngày sinh');
+        return;
+      }
+      
+      if (!personalInfo.gender) {
+        Alert.alert('Lỗi', 'Vui lòng chọn giới tính');
         return;
       }
 
-      await api.post('/users', formData);
+      // Show loading
+      setSubmitting(true);
+      setLoadingMessage('Đang tạo user...');
+
+      // Format date properly for backend
+      const userData = {
+        email: email.toLowerCase().trim(),
+        password: password,
+        role: role,
+        personalInfo: {
+          firstName: personalInfo.firstName.trim(),
+          lastName: personalInfo.lastName.trim(),
+          dateOfBirth: new Date(personalInfo.dateOfBirth).toISOString(),
+          gender: personalInfo.gender,
+          phone: personalInfo.phone?.trim() || ''
+        }
+      };
+
+      console.log('📤 Creating user with data:', JSON.stringify(userData, null, 2));
+
+      await api.post('/users', userData);
+      setSubmitting(false);
       Alert.alert('Thành công', 'Tạo user thành công');
       setShowCreateModal(false);
       setFormData({
@@ -75,7 +123,7 @@ const UserManagement = ({ navigation }) => {
         personalInfo: {
           firstName: '',
           lastName: '',
-          dateOfBirth: '',
+          dateOfBirth: null,
           gender: 'MALE',
           phone: ''
         },
@@ -83,7 +131,13 @@ const UserManagement = ({ navigation }) => {
       });
       fetchUsers();
     } catch (error) {
-      Alert.alert('Lỗi', error.response?.data?.error || 'Không thể tạo user');
+      setSubmitting(false);
+      console.log('❌ Create user error:', error.response?.data);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.details?.join(', ') || 
+                          error.message || 
+                          'Không thể tạo user';
+      Alert.alert('Lỗi', errorMessage);
     }
   };
 
@@ -92,13 +146,24 @@ const UserManagement = ({ navigation }) => {
       { text: 'Hủy', onPress: () => {} },
       {
         text: 'Xóa',
+        style: 'destructive',
         onPress: async () => {
           try {
+            setSubmitting(true);
+            setLoadingMessage('Đang xóa user...');
+            console.log('🗑️ Deleting user:', userId);
             await api.delete(`/users/${userId}`);
+            setSubmitting(false);
             Alert.alert('Thành công', 'Xóa user thành công');
             fetchUsers();
           } catch (error) {
-            Alert.alert('Lỗi', 'Không thể xóa user');
+            setSubmitting(false);
+            console.log('❌ Delete user error:', error.response?.data);
+            const errorMessage = error.response?.data?.error || 
+                                error.response?.data?.message ||
+                                error.message || 
+                                'Không thể xóa user';
+            Alert.alert('Lỗi', errorMessage);
           }
         }
       }
@@ -159,7 +224,7 @@ const UserManagement = ({ navigation }) => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={{fontSize: 18, fontWeight: 'bold'}}>Tạo User Mới</Text>
-              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+              <TouchableOpacity onPress={() => !submitting && setShowCreateModal(false)}>
                 <MaterialIcons name="close" size={28} color="#333" />
               </TouchableOpacity>
             </View>
@@ -202,17 +267,40 @@ const UserManagement = ({ navigation }) => {
                 mode="outlined"
                 style={styles.input}
               />
-              <TextInput
-                label="Ngày Sinh (YYYY-MM-DD)"
-                value={formData.personalInfo.dateOfBirth}
-                onChangeText={(text) => setFormData({
-                  ...formData,
-                  personalInfo: { ...formData.personalInfo, dateOfBirth: text }
-                })}
-                mode="outlined"
-                style={styles.input}
-                placeholder="1990-01-01"
-              />
+              
+              {/* Date Picker for Date of Birth */}
+              <Text style={styles.dateLabel}>Ngày Sinh:</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <MaterialIcons name="calendar-today" size={20} color="#666" />
+                <Text style={styles.datePickerText}>
+                  {formData.personalInfo.dateOfBirth 
+                    ? formData.personalInfo.dateOfBirth.toLocaleDateString('vi-VN')
+                    : 'Chọn ngày sinh'}
+                </Text>
+              </TouchableOpacity>
+              
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formData.personalInfo.dateOfBirth || new Date(2000, 0, 1)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1900, 0, 1)}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setFormData({
+                        ...formData,
+                        personalInfo: { ...formData.personalInfo, dateOfBirth: selectedDate }
+                      });
+                    }
+                  }}
+                />
+              )}
+              
               <TextInput
                 label="Số Điện Thoại"
                 value={formData.personalInfo.phone}
@@ -280,6 +368,7 @@ const UserManagement = ({ navigation }) => {
                 mode="outlined"
                 onPress={() => setShowCreateModal(false)}
                 style={styles.button}
+                disabled={submitting}
               >
                 Hủy
               </Button>
@@ -287,10 +376,22 @@ const UserManagement = ({ navigation }) => {
                 mode="contained"
                 onPress={handleCreateUser}
                 style={styles.button}
+                disabled={submitting}
               >
                 Tạo User
               </Button>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Loading Overlay */}
+      <Modal visible={submitting} transparent animationType="fade">
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>{loadingMessage}</Text>
+            <Text style={styles.loadingSubText}>Vui lòng đợi...</Text>
           </View>
         </View>
       </Modal>
@@ -375,6 +476,28 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 12
   },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333'
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    backgroundColor: '#fff'
+  },
+  datePickerText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#333'
+  },
   roleContainer: {
     marginTop: 12,
     marginBottom: 16
@@ -418,6 +541,35 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 30,
+    alignItems: 'center',
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  loadingSubText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666'
   }
 });
 
