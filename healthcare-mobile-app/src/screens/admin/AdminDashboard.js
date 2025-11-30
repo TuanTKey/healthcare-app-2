@@ -92,20 +92,28 @@ const AdminDashboard = () => {
         console.log('📊 Appointments total from stats:', totalAppointmentsCount);
       } catch (err) {
         console.warn('Could not fetch appointments stats, trying list:', err.message);
-        // Fallback to list endpoint - don't pass invalid status param
+        // Fallback to list endpoint with valid params to pass validation
         try {
-          const appointmentsRes = await api.get('/appointments');
-          if (appointmentsRes.data?.data?.pagination?.total) {
+          const appointmentsRes = await api.get('/appointments?page=1&limit=100');
+          console.log('📊 Appointments List Response:', JSON.stringify(appointmentsRes.data, null, 2));
+          
+          // Check nested structure: response.data.data.pagination
+          if (appointmentsRes.data?.data?.pagination?.total !== undefined) {
             totalAppointmentsCount = appointmentsRes.data.data.pagination.total;
-          } else if (appointmentsRes.data?.pagination?.total) {
+            console.log('📊 Got appointments total from data.data.pagination:', totalAppointmentsCount);
+          } else if (appointmentsRes.data?.pagination?.total !== undefined) {
             totalAppointmentsCount = appointmentsRes.data.pagination.total;
-          } else if (Array.isArray(appointmentsRes.data?.data?.data)) {
+            console.log('📊 Got appointments total from data.pagination:', totalAppointmentsCount);
+          }
+          
+          // Extract appointments array
+          if (Array.isArray(appointmentsRes.data?.data?.data)) {
             appointments = appointmentsRes.data.data.data;
-            totalAppointmentsCount = appointments.length;
           } else if (Array.isArray(appointmentsRes.data?.data)) {
             appointments = appointmentsRes.data.data;
-            totalAppointmentsCount = appointments.length;
           }
+          
+          console.log('📊 Appointments array length:', appointments.length);
         } catch (e) {
           console.warn('Could not fetch appointments list:', e.message);
         }

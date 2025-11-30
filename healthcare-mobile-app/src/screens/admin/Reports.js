@@ -30,8 +30,8 @@ const Reports = ({ navigation }) => {
     try {
       setLoading(true);
       const [usersRes, appointmentsRes] = await Promise.all([
-        api.get('/users').catch(() => ({ data: { data: [] } })),
-        api.get('/appointments').catch(() => ({ data: { data: [] } }))
+        api.get('/users?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/appointments?page=1&limit=100').catch(() => ({ data: { data: [] } }))
       ]);
 
       const users = usersRes.data.data || [];

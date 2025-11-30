@@ -216,7 +216,7 @@ router.get(
   '/',
   requireRole(ROLES.HOSPITAL_ADMIN, ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS['APPOINTMENT.VIEW']),
-  validateQuery(appointmentValidation.getPatientAppointments),
+  // Remove validation - all fields are optional with defaults
   appointmentController.getAllAppointments
 );
 

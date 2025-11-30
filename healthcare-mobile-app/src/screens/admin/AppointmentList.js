@@ -27,7 +27,7 @@ const AppointmentList = ({ navigation }) => {
     try {
       setLoading(true);
       console.log('📋 Admin fetching all appointments...');
-      const response = await api.get('/appointments');
+      const response = await api.get('/appointments?page=1&limit=100');
       console.log('📋 Full API Response:', response.data);
       
       // API response structure: { data: { data: [...], pagination: {...} }, message, success }
