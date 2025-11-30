@@ -92,13 +92,16 @@ const AdminDashboard = () => {
         console.log('📊 Appointments total from stats:', totalAppointmentsCount);
       } catch (err) {
         console.warn('Could not fetch appointments stats, trying list:', err.message);
-        // Fallback to list endpoint
+        // Fallback to list endpoint - don't pass invalid status param
         try {
-          const appointmentsRes = await api.get('/appointments?status=all');
+          const appointmentsRes = await api.get('/appointments');
           if (appointmentsRes.data?.data?.pagination?.total) {
             totalAppointmentsCount = appointmentsRes.data.data.pagination.total;
           } else if (appointmentsRes.data?.pagination?.total) {
             totalAppointmentsCount = appointmentsRes.data.pagination.total;
+          } else if (Array.isArray(appointmentsRes.data?.data?.data)) {
+            appointments = appointmentsRes.data.data.data;
+            totalAppointmentsCount = appointments.length;
           } else if (Array.isArray(appointmentsRes.data?.data)) {
             appointments = appointmentsRes.data.data;
             totalAppointmentsCount = appointments.length;
