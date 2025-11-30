@@ -41,7 +41,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await api.get('/appointments', {
-        params: { page: 1, limit: 200 }
+        params: { page: 1, limit: 100 }
       });
       
       let allAppointments = response.data?.data?.appointments || response.data?.data || [];

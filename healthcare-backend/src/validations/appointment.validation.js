@@ -79,7 +79,7 @@ const appointmentValidation = {
   getPatientAppointments: Joi.object({
     status: Joi.string().valid('SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW').optional(),
     page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(10),
+    limit: Joi.number().integer().min(1).max(500).default(10),
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
     sortBy: Joi.string().valid('appointmentDate', 'createdAt', 'status').default('appointmentDate'),
@@ -90,7 +90,7 @@ const appointmentValidation = {
   getDoctorAppointments: Joi.object({
     status: Joi.string().valid('SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW').optional(),
     page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(10),
+    limit: Joi.number().integer().min(1).max(500).default(10),
     date: Joi.date().optional(),
     sortBy: Joi.string().valid('appointmentDate', 'createdAt').default('appointmentDate'),
     sortOrder: Joi.string().valid('asc', 'desc').default('asc')
@@ -111,7 +111,7 @@ const appointmentValidation = {
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
     page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(20)
+    limit: Joi.number().integer().min(1).max(500).default(20)
   })
 };
 
