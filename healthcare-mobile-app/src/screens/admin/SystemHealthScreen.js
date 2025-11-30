@@ -200,9 +200,9 @@ const SystemHealthScreen = ({ navigation }) => {
   };
 
   const StatusBadge = ({ status }) => (
-    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
-      <MaterialIcons name={getStatusIcon(status)} size={14} color="#fff" />
-      <Text style={styles.statusBadgeText}>{status.toUpperCase()}</Text>
+    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status || 'unknown') }]}>
+      <MaterialIcons name={getStatusIcon(status || 'unknown')} size={14} color="#fff" />
+      <Text style={styles.statusBadgeText}>{(status || 'unknown').toUpperCase()}</Text>
     </View>
   );
 
