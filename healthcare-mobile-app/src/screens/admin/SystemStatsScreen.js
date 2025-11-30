@@ -53,7 +53,7 @@ const SystemStatsScreen = ({ navigation }) => {
       // Fetch appointments stats
       let appointmentsData = { total: 0, byStatus: {} };
       try {
-        const appointmentsRes = await api.get('/appointments?limit=1000');
+        const appointmentsRes = await api.get('/appointments?page=1&limit=100');
         const appointments = appointmentsRes.data?.data?.appointments || appointmentsRes.data?.data || [];
         appointmentsData.total = appointments.length;
         appointmentsData.byStatus = appointments.reduce((acc, apt) => {
@@ -71,7 +71,7 @@ const SystemStatsScreen = ({ navigation }) => {
       // Fetch bills stats
       let billsData = { total: 0, totalRevenue: 0, byStatus: {} };
       try {
-        const billsRes = await api.get('/billing/bills?limit=1000');
+        const billsRes = await api.get('/bills?page=1&limit=100');
         const bills = billsRes.data?.data?.docs || billsRes.data?.data || [];
         billsData.total = bills.length;
         billsData.totalRevenue = bills.reduce((sum, bill) => sum + (bill.finalAmount || bill.amount || 0), 0);

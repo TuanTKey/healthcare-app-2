@@ -1116,6 +1116,80 @@ class AppointmentService {
       throw error;
     }
   }
+
+  /**
+   * 📊 LẤY THỐNG KÊ LỊCH HẸN (CHO ADMIN DASHBOARD)
+   */
+  async getAppointmentsStats() {
+    try {
+      console.log('📊 [SERVICE] Getting appointments statistics');
+
+      // Lấy tổng số lịch hẹn
+      const totalAppointments = await Appointment.countDocuments();
+
+      // Lấy lịch hẹn theo trạng thái
+      const byStatus = await Appointment.aggregate([
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      // Lấy lịch hẹn hôm nay
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const todayAppointments = await Appointment.countDocuments({
+        appointmentDate: {
+          $gte: today,
+          $lt: tomorrow
+        }
+      });
+
+      // Lịch hẹn đang chờ xác nhận
+      const pendingAppointments = await Appointment.countDocuments({
+        status: { $in: ['SCHEDULED', 'PENDING'] }
+      });
+
+      // Lịch hẹn đã xác nhận
+      const confirmedAppointments = await Appointment.countDocuments({
+        status: 'CONFIRMED'
+      });
+
+      // Lịch hẹn đã hoàn thành
+      const completedAppointments = await Appointment.countDocuments({
+        status: 'COMPLETED'
+      });
+
+      // Lịch hẹn đã hủy
+      const cancelledAppointments = await Appointment.countDocuments({
+        status: 'CANCELLED'
+      });
+
+      const statusMap = {};
+      byStatus.forEach(item => {
+        statusMap[item._id] = item.count;
+      });
+
+      return {
+        total: totalAppointments,
+        today: todayAppointments,
+        pending: pendingAppointments,
+        confirmed: confirmedAppointments,
+        completed: completedAppointments,
+        cancelled: cancelledAppointments,
+        byStatus: statusMap
+      };
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get appointments stats failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new AppointmentService();

@@ -111,8 +111,8 @@ const SystemHealthScreen = ({ navigation }) => {
   const checkApiEndpoints = async () => {
     const endpoints = [
       { name: 'Users API', path: '/users?limit=1' },
-      { name: 'Appointments API', path: '/appointments?limit=1' },
-      { name: 'Billing API', path: '/billing/bills?limit=1' },
+      { name: 'Appointments API', path: '/appointments?page=1&limit=1' },
+      { name: 'Billing API', path: '/bills?page=1&limit=1' },
       { name: 'Auth API', path: '/auth/me' }
     ];
 

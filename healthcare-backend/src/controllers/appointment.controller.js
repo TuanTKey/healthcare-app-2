@@ -525,6 +525,25 @@ class AppointmentController {
       next(error);
     }
   }
+
+  /**
+   * 📊 LẤY THỐNG KÊ LỊCH HẸN (CHO ADMIN DASHBOARD)
+   */
+  async getAppointmentsStats(req, res, next) {
+    try {
+      console.log('📊 [APPOINTMENT] Getting appointments statistics');
+
+      const result = await appointmentService.getAppointmentsStats();
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AppointmentController();

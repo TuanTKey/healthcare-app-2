@@ -78,13 +78,12 @@ router.get(
   medicalRecordController.searchMedicalRecordsByDiagnosis
 );
 
-// 🎯 THỐNG KÊ HỒ SƠ BỆNH ÁN
+// 🎯 THỐNG KÊ LỊCH HẸN
 router.get(
   '/stats/overview',
   requireRole(ROLES.DOCTOR, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS['REPORT.VIEW']),
-  validateQuery(medicalRecordValidation.getStats),
-  medicalRecordController.getMedicalRecordsStats
+  appointmentController.getAppointmentsStats
 );
 
 // 🎯 LẤY LỊCH HẸN THEO DEPARTMENT
