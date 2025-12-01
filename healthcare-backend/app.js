@@ -163,11 +163,17 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     environment: appConfig.env,
     timestamp: new Date().toISOString(),
-    documentation: '/api/docs', // 🆕 CÓ THỂ THÊM SWAGGER SAU NÀY
+    documentation: '/api/docs',
     endpoints: {
       auth: '/api/auth',
       users: '/api/users',
       superAdmin: '/api/super-admin',
+      patients: '/api/patients',
+      appointments: '/api/appointments',
+      medicalRecords: '/api/medical-records',
+      prescriptions: '/api/prescriptions',
+      bills: '/api/bills',
+      laboratory: '/api/laboratory',
       health: '/health'
     }
   });
