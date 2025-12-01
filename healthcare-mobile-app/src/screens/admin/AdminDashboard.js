@@ -29,7 +29,8 @@ const AdminDashboard = () => {
     totalNurses: 0,
     pendingRequests: 0,
     todayAppointments: 0,
-    revenue: 0
+    revenue: 0,
+    deletedUsers: 0
   });
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -146,20 +147,25 @@ const AdminDashboard = () => {
 
       // 📊 Parse user stats từ API thống kê
       let totalUsers = 0;
+      let totalAllUsers = 0;
       let patients = 0;
       let doctors = 0;
       let nurses = 0;
       let pending = 0;
+      let deletedUsers = 0;
       
       if (userStats) {
         // Sử dụng summary nếu có
         if (userStats.summary) {
           totalUsers = userStats.summary.totalUsers || 0;
+          totalAllUsers = userStats.summary.totalAllUsers || totalUsers; // Tổng tất cả (kể cả đã xóa)
+          deletedUsers = userStats.summary.deletedUsers || 0;
         }
         
-        // Parse byRole array để lấy count theo từng role
-        if (userStats.byRole && Array.isArray(userStats.byRole)) {
-          for (const roleData of userStats.byRole) {
+        // Parse byRoleAll array để lấy tổng TẤT CẢ users theo role (kể cả đã xóa)
+        const roleArray = userStats.byRoleAll || userStats.byRole || [];
+        if (Array.isArray(roleArray)) {
+          for (const roleData of roleArray) {
             if (roleData._id === 'PATIENT') {
               patients = roleData.total || roleData.count || 0;
             } else if (roleData._id === 'DOCTOR') {
@@ -176,24 +182,27 @@ const AdminDashboard = () => {
 
       console.log('📊 Final Stats:', {
         totalUsers,
+        totalAllUsers,
         totalPatients: patients,
         totalDoctors: doctors,
         totalNurses: nurses,
         totalAppointments: totalAppointmentsCount,
         pendingRequests: pending,
         todayAppointments: todayAppts,
-        revenue: totalRevenue
+        revenue: totalRevenue,
+        deletedUsers
       });
 
       setStats({
-        totalUsers,
+        totalUsers: totalAllUsers, // Hiển thị tổng TẤT CẢ users (kể cả đã xóa)
         totalAppointments: totalAppointmentsCount,
         totalPatients: patients,
         totalDoctors: doctors,
         totalNurses: nurses,
         pendingRequests: pending < 0 ? 0 : pending,
         todayAppointments: todayAppts,
-        revenue: totalRevenue
+        revenue: totalRevenue,
+        deletedUsers
       });
     } catch (error) {
       console.error('Error fetching data:', error.message);

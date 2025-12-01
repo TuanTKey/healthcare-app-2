@@ -336,6 +336,7 @@ userSchema.statics.findByResetToken = function(token) {
 };
 
 userSchema.statics.getUserStats = async function() {
+  // Thống kê theo role (chỉ users chưa xóa)
   const stats = await this.aggregate([
     {
       $match: { isDeleted: false }
@@ -357,7 +358,29 @@ userSchema.statics.getUserStats = async function() {
     }
   ]);
 
-  const totalUsers = await this.countDocuments({ isDeleted: false });
+  // Thống kê theo role (TẤT CẢ users, kể cả đã xóa)
+  const allStats = await this.aggregate([
+    {
+      $group: {
+        _id: '$role',
+        total: { $sum: 1 },
+        active: {
+          $sum: { $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0] }
+        },
+        deleted: {
+          $sum: { $cond: ['$isDeleted', 1, 0] }
+        }
+      }
+    },
+    {
+      $sort: { total: -1 }
+    }
+  ]);
+
+  // Đếm tổng số users
+  const totalAllUsers = await this.countDocuments(); // Tất cả users
+  const totalUsers = await this.countDocuments({ isDeleted: false }); // Users chưa xóa
+  const deletedUsers = await this.countDocuments({ isDeleted: true }); // Users đã xóa
   const activeUsers = await this.countDocuments({ 
     status: 'ACTIVE', 
     isDeleted: false 
@@ -369,8 +392,11 @@ userSchema.statics.getUserStats = async function() {
 
   return {
     byRole: stats,
+    byRoleAll: allStats, // Thêm thống kê tất cả users
     summary: {
-      totalUsers,
+      totalAllUsers,    // Tổng tất cả users (kể cả đã xóa)
+      totalUsers,       // Users chưa xóa
+      deletedUsers,     // Users đã xóa
       activeUsers,
       verifiedUsers,
       verificationRate: totalUsers > 0 ? (verifiedUsers / totalUsers * 100).toFixed(2) : 0
