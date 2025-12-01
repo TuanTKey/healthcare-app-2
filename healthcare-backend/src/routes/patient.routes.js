@@ -29,6 +29,14 @@ router.use((req, res, next) => {
 
 router.use(authenticate);
 
+// 0. LẤY DANH SÁCH TẤT CẢ BỆNH NHÂN
+router.get(
+  '/',
+  requireRole(ROLES.SUPER_ADMIN, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTIONIST),
+  requirePermission(PERMISSIONS['PATIENT.VIEW']),
+  patientController.listPatients
+);
+
 // 1. ĐĂNG KÝ BỆNH NHÂN - THÊM DEBUG TRƯỚC VALIDATION
 router.post(
   '/register',

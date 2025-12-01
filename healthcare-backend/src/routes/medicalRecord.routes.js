@@ -20,10 +20,10 @@ const { authenticate } = require('../middlewares/auth.middleware');
 // APPLY AUTH MIDDLEWARE CHO TẤT CẢ ROUTES
 router.use(authenticate);
 
-// 🎯 LẤY TẤT CẢ HỒ SƠ BỆNH ÁN (CHO ADMIN)
+// 🎯 LẤY TẤT CẢ HỒ SƠ BỆNH ÁN (CHO ADMIN VÀ DOCTOR)
 router.get(
   '/',
-  requireRole(ROLES.HOSPITAL_ADMIN),
+  requireRole(ROLES.HOSPITAL_ADMIN, ROLES.DOCTOR, ROLES.NURSE, ROLES.SUPER_ADMIN),
   medicalRecordController.getAllMedicalRecords
 );
 

@@ -25,7 +25,7 @@ const DoctorLabOrders = ({ navigation }) => {
   const fetchLabOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/lab-orders?limit=100');
+      const response = await api.get('/laboratory/lab-orders?limit=100');
       
       let data = [];
       if (response.data?.data?.labOrders) {

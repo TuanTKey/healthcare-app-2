@@ -179,15 +179,17 @@ const appointmentRoutes = require('./src/routes/appointment.routes');
 const medicalRecordRoutes = require('./src/routes/medicalRecord.routes');
 const prescriptionRoutes = require('./src/routes/prescription.routes');
 const billingRoutes = require('./src/routes/billing.routes');
+const laboratoryRoutes = require('./src/routes/laboratory.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/medicalRecord', medicalRecordRoutes);
+app.use('/api/medical-records', medicalRecordRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/bills', billingRoutes);
+app.use('/api/laboratory', laboratoryRoutes);
 
 // 🔍 DEBUG ENDPOINT (chỉ trong development) - CẢI THIỆN
 if (appConfig.isDev) {

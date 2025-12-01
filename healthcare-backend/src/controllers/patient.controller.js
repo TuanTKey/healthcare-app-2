@@ -80,6 +80,41 @@ class PatientController {
 }
 
   /**
+   * 🎯 LẤY DANH SÁCH TẤT CẢ BỆNH NHÂN
+   */
+  async listPatients(req, res, next) {
+    try {
+      const { 
+        page = 1, 
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+        status
+      } = req.query;
+
+      console.log('📋 [PATIENT] Listing all patients:', { page, limit, status });
+
+      const result = await patientService.searchPatients({
+        keyword: '',
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sortBy,
+        sortOrder,
+        status
+      });
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách bệnh nhân thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 🎯 TÌM KIẾM BỆNH NHÂN
    */
   async searchPatients(req, res, next) {
