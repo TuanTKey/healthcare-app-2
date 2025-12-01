@@ -171,11 +171,22 @@ const UserManagement = ({ navigation }) => {
       fetchUsers();
     } catch (error) {
       setSubmitting(false);
-      console.log('❌ Create user error:', error.response?.data);
-      const errorMessage = error.response?.data?.error || 
-                          error.response?.data?.details?.join(', ') || 
-                          error.message || 
-                          'Không thể tạo user';
+      console.log('❌ Create user error:', error.response?.data || error.message);
+      
+      let errorMessage = 'Không thể tạo user';
+      
+      if (error.message === 'Network Error') {
+        errorMessage = 'Lỗi kết nối mạng. Backend có thể đang khởi động lại, vui lòng thử lại sau 30 giây.';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.details) {
+        errorMessage = error.response.data.details.join(', ');
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       Alert.alert('Lỗi', errorMessage);
     }
   };

@@ -8,7 +8,7 @@ const BASE_URL = 'https://healthcare-app-2-apt4.onrender.com/api';
 // Create axios instance with increased timeout for Render.com cold starts
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // Increased to 30 seconds for cold starts
+  timeout: 60000, // Increased to 60 seconds for cold starts
   headers: {
     'Content-Type': 'application/json',
   },
