@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const laboratoryController = require('../controllers/laboratory.controller');
+// 🔧 FIX: Import requirePermission từ rbac.middleware thay vì auth.middleware
 const { 
   authenticate
 } = require('../middlewares/auth.middleware');
