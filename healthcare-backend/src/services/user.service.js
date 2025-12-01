@@ -303,9 +303,16 @@ async createUser(userData, currentUser) {
       if (filter.role) query.role = filter.role;
       if (filter.status) query.status = filter.status;
       
+      // 🎯 Filter isDeleted (dùng $ne: true để bao gồm cả documents thiếu field)
+      if (filter.isDeleted !== undefined) {
+        query.isDeleted = filter.isDeleted;
+      }
+      
       if (filter.$or) {
         query.$or = filter.$or;
       }
+
+      console.log('🎯 [USER SERVICE] Query:', JSON.stringify(query));
 
       // 🎯 THỰC HIỆN QUERY
       const users = await User.find(query)

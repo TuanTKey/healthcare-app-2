@@ -336,10 +336,10 @@ userSchema.statics.findByResetToken = function(token) {
 };
 
 userSchema.statics.getUserStats = async function() {
-  // Thống kê theo role (chỉ users chưa xóa)
+  // Thống kê theo role (chỉ users chưa xóa - dùng $ne: true để bao gồm cả documents thiếu field)
   const stats = await this.aggregate([
     {
-      $match: { isDeleted: false }
+      $match: { isDeleted: { $ne: true } }
     },
     {
       $group: {
@@ -377,17 +377,17 @@ userSchema.statics.getUserStats = async function() {
     }
   ]);
 
-  // Đếm tổng số users
+  // Đếm tổng số users (dùng $ne: true để bao gồm documents thiếu field isDeleted)
   const totalAllUsers = await this.countDocuments(); // Tất cả users
-  const totalUsers = await this.countDocuments({ isDeleted: false }); // Users chưa xóa
+  const totalUsers = await this.countDocuments({ isDeleted: { $ne: true } }); // Users chưa xóa
   const deletedUsers = await this.countDocuments({ isDeleted: true }); // Users đã xóa
   const activeUsers = await this.countDocuments({ 
     status: 'ACTIVE', 
-    isDeleted: false 
+    isDeleted: { $ne: true }
   });
   const verifiedUsers = await this.countDocuments({ 
     isEmailVerified: true, 
-    isDeleted: false 
+    isDeleted: { $ne: true }
   });
 
   return {

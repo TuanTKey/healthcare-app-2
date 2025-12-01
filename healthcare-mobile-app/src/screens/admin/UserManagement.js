@@ -48,7 +48,8 @@ const UserManagement = ({ navigation }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users?limit=10');
+      // Lấy tất cả users (không filter status, limit lớn)
+      const response = await api.get('/users?limit=100&status=all');
       setUsers(response.data.data || []);
     } catch (error) {
       Alert.alert('Lỗi', 'Không thể tải danh sách users: ' + error.message);

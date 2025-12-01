@@ -138,7 +138,7 @@ async createUser(req, res, next) {
         limit = 10, 
         role, 
         search,
-        status = 'ACTIVE',
+        status,
         sortBy = 'createdAt',
         sortOrder = 'desc',
         includeDeleted = false
@@ -148,7 +148,13 @@ async createUser(req, res, next) {
         page, limit, role, search, status
       });
 
-      const filter = { status };
+      const filter = {};
+      
+      // Chỉ filter status nếu được chỉ định và không phải 'all'
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+      
       if (role) filter.role = role;
       if (search) {
         filter.$or = [
@@ -157,10 +163,12 @@ async createUser(req, res, next) {
           { email: { $regex: search, $options: 'i' } }
         ];
       }
+      
+      // Mặc định không lấy users đã xóa, trừ khi includeDeleted = true
       if (includeDeleted === 'true') {
-        delete filter.status; // Include all status when viewing deleted
+        // Lấy cả users đã xóa
       } else {
-        filter.isDeleted = false;
+        filter.isDeleted = { $ne: true }; // Lấy users chưa xóa (bao gồm cả field missing)
       }
       
       const result = await userService.listUsers(filter, {
