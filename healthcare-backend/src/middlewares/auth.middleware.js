@@ -92,12 +92,26 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * 🎯 MIDDLEWARE KIỂM TRA PERMISSION
+ * 🎯 MIDDLEWARE KIỂM TRA PERMISSION - DEPRECATED
+ * ⚠️ SỬ DỤNG requirePermission TỪ rbac.middleware.js THAY THẾ
  */
 function requirePermission(permission) {
   return (req, res, next) => {
+    // 🔧 DEBUG: Log permission để phát hiện undefined
+    console.log('⚠️ [AUTH.MW] requirePermission called with:', { permission, path: req.path });
+    
     if (!req.user) {
       return next(new AppError('Yêu cầu xác thực', 401, ERROR_CODES.AUTH_INVALID_TOKEN));
+    }
+
+    // 🔧 FIX: Nếu permission undefined, log rõ ràng
+    if (!permission) {
+      console.error('❌ [AUTH.MW] Permission is undefined! Check route import.');
+      return next(new AppError(
+        'Lỗi cấu hình quyền - permission undefined', 
+        500, 
+        'PERMISSION_CONFIG_ERROR'
+      ));
     }
 
     if (!hasPermission(req.user.role, permission)) {
