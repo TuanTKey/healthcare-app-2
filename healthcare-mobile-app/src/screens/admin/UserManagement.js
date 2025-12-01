@@ -38,8 +38,16 @@ const UserManagement = ({ navigation }) => {
       gender: 'MALE',
       phone: ''
     },
+    professionalInfo: {
+      licenseNumber: '',
+      specialization: '',
+      department: ''
+    },
     role: 'PATIENT'
   });
+
+  // Roles that require professional info
+  const PROFESSIONAL_ROLES = ['DOCTOR', 'NURSE', 'PHARMACIST', 'LAB_TECHNICIAN'];
 
   useEffect(() => {
     fetchUsers();
@@ -66,7 +74,7 @@ const UserManagement = ({ navigation }) => {
 
   const handleCreateUser = async () => {
     try {
-      const { email, password, personalInfo, role } = formData;
+      const { email, password, personalInfo, professionalInfo, role } = formData;
       
       // Validate all required fields
       if (!email || !password) {
@@ -94,6 +102,22 @@ const UserManagement = ({ navigation }) => {
         return;
       }
 
+      // Validate professional info for DOCTOR, NURSE, etc.
+      if (PROFESSIONAL_ROLES.includes(role)) {
+        if (!professionalInfo.licenseNumber || !professionalInfo.licenseNumber.trim()) {
+          Alert.alert('Lỗi', 'Vui lòng nhập số giấy phép hành nghề');
+          return;
+        }
+        if (!professionalInfo.specialization || !professionalInfo.specialization.trim()) {
+          Alert.alert('Lỗi', 'Vui lòng nhập chuyên khoa');
+          return;
+        }
+        if (!professionalInfo.department || !professionalInfo.department.trim()) {
+          Alert.alert('Lỗi', 'Vui lòng nhập khoa/phòng làm việc');
+          return;
+        }
+      }
+
       // Show loading
       setSubmitting(true);
       setLoadingMessage('Đang tạo user...');
@@ -112,6 +136,15 @@ const UserManagement = ({ navigation }) => {
         }
       };
 
+      // Add professional info for applicable roles
+      if (PROFESSIONAL_ROLES.includes(role)) {
+        userData.professionalInfo = {
+          licenseNumber: professionalInfo.licenseNumber.trim(),
+          specialization: professionalInfo.specialization.trim(),
+          department: professionalInfo.department.trim()
+        };
+      }
+
       console.log('📤 Creating user with data:', JSON.stringify(userData, null, 2));
 
       await api.post('/users', userData);
@@ -127,6 +160,11 @@ const UserManagement = ({ navigation }) => {
           dateOfBirth: null,
           gender: 'MALE',
           phone: ''
+        },
+        professionalInfo: {
+          licenseNumber: '',
+          specialization: '',
+          department: ''
         },
         role: 'PATIENT'
       });
@@ -362,6 +400,46 @@ const UserManagement = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Professional Info for DOCTOR/NURSE */}
+              {PROFESSIONAL_ROLES.includes(formData.role) && (
+                <View style={styles.professionalInfoContainer}>
+                  <Text style={styles.sectionTitle}>Thông Tin Chuyên Môn</Text>
+                  <TextInput
+                    label="Số Giấy Phép Hành Nghề *"
+                    value={formData.professionalInfo.licenseNumber}
+                    onChangeText={(text) => setFormData({
+                      ...formData,
+                      professionalInfo: { ...formData.professionalInfo, licenseNumber: text }
+                    })}
+                    mode="outlined"
+                    style={styles.input}
+                    placeholder="VD: GP-12345"
+                  />
+                  <TextInput
+                    label="Chuyên Khoa *"
+                    value={formData.professionalInfo.specialization}
+                    onChangeText={(text) => setFormData({
+                      ...formData,
+                      professionalInfo: { ...formData.professionalInfo, specialization: text }
+                    })}
+                    mode="outlined"
+                    style={styles.input}
+                    placeholder="VD: Nội khoa, Tim mạch, Nhi khoa..."
+                  />
+                  <TextInput
+                    label="Khoa/Phòng *"
+                    value={formData.professionalInfo.department}
+                    onChangeText={(text) => setFormData({
+                      ...formData,
+                      professionalInfo: { ...formData.professionalInfo, department: text }
+                    })}
+                    mode="outlined"
+                    style={styles.input}
+                    placeholder="VD: Khoa Nội, Khoa Ngoại, Phòng Xét nghiệm..."
+                  />
+                </View>
+              )}
             </ScrollView>
 
             <View style={styles.buttonContainer}>
@@ -534,6 +612,19 @@ const styles = StyleSheet.create({
   roleButtonTextActive: {
     color: '#007AFF',
     fontWeight: 'bold'
+  },
+  professionalInfoContainer: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    marginBottom: 16
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 12
   },
   buttonContainer: {
     flexDirection: 'row',
