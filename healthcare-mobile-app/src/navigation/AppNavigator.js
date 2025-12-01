@@ -27,6 +27,7 @@ import ProfileScreen from '../screens/shared/ProfileScreen';
 
 // Navigators
 import AdminTabNavigator from './AdminNavigator';
+import DoctorNavigator from './DoctorNavigator';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -163,6 +164,24 @@ const AppNavigator = () => {
             <Stack.Screen 
               name="AdminTabs" 
               component={AdminTabNavigator}
+              options={{ headerShown: false }}
+            />
+          </>
+        ) : user?.role === 'DOCTOR' ? (
+          // Doctor Stack
+          <>
+            <Stack.Screen 
+              name="DoctorMain" 
+              component={DoctorNavigator}
+              options={{ headerShown: false }}
+            />
+          </>
+        ) : user?.role === 'NURSE' ? (
+          // Nurse Stack (tạm thời dùng Doctor Navigator)
+          <>
+            <Stack.Screen 
+              name="NurseMain" 
+              component={DoctorNavigator}
               options={{ headerShown: false }}
             />
           </>
