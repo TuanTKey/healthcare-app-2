@@ -892,6 +892,34 @@ class AppointmentService {
         }
       });
 
+      // 🎯 XỬ LÝ CẬP NHẬT STATUS RIÊNG
+      if (updateData.status) {
+        const validTransitions = {
+          'SCHEDULED': ['CONFIRMED', 'CANCELLED'],
+          'PENDING': ['CONFIRMED', 'CANCELLED', 'SCHEDULED'],
+          'CONFIRMED': ['IN_PROGRESS', 'CANCELLED'],
+          'IN_PROGRESS': ['COMPLETED', 'CANCELLED'],
+          'COMPLETED': [],
+          'CANCELLED': []
+        };
+
+        const currentStatus = appointment.status;
+        const newStatus = updateData.status;
+
+        if (!validTransitions[currentStatus]?.includes(newStatus)) {
+          throw new AppError(`Không thể chuyển từ ${currentStatus} sang ${newStatus}`, 400, 'INVALID_STATUS_TRANSITION');
+        }
+
+        appointment.status = newStatus;
+
+        // Cập nhật timestamps theo status
+        if (newStatus === 'IN_PROGRESS') {
+          appointment.actualStartTime = new Date();
+        } else if (newStatus === 'COMPLETED') {
+          appointment.actualEndTime = new Date();
+        }
+      }
+
       // 🎯 KIỂM TRA TRÙNG LỊCH NẾU CÓ THAY ĐỔI THỜI GIAN
       if (updateData.appointmentDate) {
         const conflictingAppointment = await this.checkSchedulingConflict(
