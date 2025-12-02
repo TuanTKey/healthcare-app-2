@@ -88,14 +88,17 @@ const DoctorDashboard = () => {
           }
         });
         
-        todayAppts = todayTotal;
+        // "Hẹn hôm nay" = chỉ đếm lịch chờ khám (chưa hoàn thành)
+        todayAppts = todayPending;
         completedAppts = todayCompleted;
 
         // Lấy lịch hôm nay - chỉ hiển thị lịch chờ khám (chưa hoàn thành, chưa hủy)
         const todayAppointments = appointments
           .filter(apt => {
             const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
-            return aptDate === today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+            const shouldShow = aptDate === today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+            console.log(`📅 Appointment ${apt.appointmentId}: date=${aptDate}, today=${today}, status=${apt.status}, show=${shouldShow}`);
+            return shouldShow;
           })
           .sort((a, b) => 
             new Date(a.scheduledTime || a.appointmentDate || a.date) - 
@@ -103,6 +106,7 @@ const DoctorDashboard = () => {
           )
           .slice(0, 5);
         
+        console.log(`📋 Today schedule count: ${todayAppointments.length}`);
         setTodaySchedule(todayAppointments);
 
       } catch (err) {
