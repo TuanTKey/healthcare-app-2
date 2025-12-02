@@ -62,27 +62,26 @@ const AllBillsScreen = ({ navigation, route }) => {
   useEffect(() => {
     let result = [...bills];
 
-    // Filter by status
+    // Filter by status - sử dụng đúng status từ API
     if (statusFilter === 'pending') {
-      result = result.filter(b => b.status === 'PENDING' || b.status === 'PARTIALLY_PAID');
+      result = result.filter(b => b.status === 'ISSUED' || b.status === 'PARTIAL');
     } else if (statusFilter === 'paid') {
       result = result.filter(b => b.status === 'PAID');
     } else if (statusFilter === 'cancelled') {
-      result = result.filter(b => b.status === 'CANCELLED' || b.status === 'VOIDED');
+      result = result.filter(b => b.status === 'CANCELLED' || b.status === 'WRITTEN_OFF');
     }
 
-    // Search
+    // Search - sử dụng patientId thay vì patient
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(b => 
         (b.billNumber && b.billNumber.toLowerCase().includes(query)) ||
-        (b.patient?.personalInfo?.firstName && b.patient.personalInfo.firstName.toLowerCase().includes(query)) ||
-        (b.patient?.personalInfo?.lastName && b.patient.personalInfo.lastName.toLowerCase().includes(query)) ||
-        (b.patient?.name && b.patient.name.toLowerCase().includes(query))
+        (b.patientId?.personalInfo?.firstName && b.patientId.personalInfo.firstName.toLowerCase().includes(query)) ||
+        (b.patientId?.personalInfo?.lastName && b.patientId.personalInfo.lastName.toLowerCase().includes(query))
       );
     }
 
-    // Sort
+    // Sort - sử dụng grandTotal thay vì totalAmount
     result.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -90,9 +89,9 @@ const AllBillsScreen = ({ navigation, route }) => {
         case 'oldest':
           return new Date(a.createdAt) - new Date(b.createdAt);
         case 'highest':
-          return (b.totalAmount || 0) - (a.totalAmount || 0);
+          return (b.grandTotal || 0) - (a.grandTotal || 0);
         case 'lowest':
-          return (a.totalAmount || 0) - (b.totalAmount || 0);
+          return (a.grandTotal || 0) - (b.grandTotal || 0);
         default:
           return 0;
       }
@@ -118,8 +117,12 @@ const AllBillsScreen = ({ navigation, route }) => {
     switch (status) {
       case 'PAID': return '#4caf50';
       case 'PENDING': return '#ff9800';
+      case 'ISSUED': return '#ff9800';
+      case 'PARTIAL': return '#2196f3';
       case 'PARTIALLY_PAID': return '#2196f3';
+      case 'OVERDUE': return '#f44336';
       case 'CANCELLED': return '#f44336';
+      case 'WRITTEN_OFF': return '#9e9e9e';
       case 'VOIDED': return '#9e9e9e';
       default: return '#757575';
     }
@@ -129,8 +132,12 @@ const AllBillsScreen = ({ navigation, route }) => {
     switch (status) {
       case 'PAID': return 'Đã thanh toán';
       case 'PENDING': return 'Chờ thanh toán';
+      case 'ISSUED': return 'Chờ thanh toán';
+      case 'PARTIAL': return 'Thanh toán một phần';
       case 'PARTIALLY_PAID': return 'Thanh toán một phần';
+      case 'OVERDUE': return 'Quá hạn';
       case 'CANCELLED': return 'Đã hủy';
+      case 'WRITTEN_OFF': return 'Đã xóa';
       case 'VOIDED': return 'Đã vô hiệu';
       default: return status;
     }
@@ -164,15 +171,14 @@ const AllBillsScreen = ({ navigation, route }) => {
         <View style={styles.patientInfo}>
           <MaterialIcons name="person" size={18} color="#666" />
           <Text style={styles.patientName}>
-            {item.patient?.personalInfo?.firstName} {item.patient?.personalInfo?.lastName}
-            {item.patient?.name && ` (${item.patient.name})`}
+            {item.patientId?.personalInfo?.firstName} {item.patientId?.personalInfo?.lastName}
           </Text>
         </View>
 
-        {item.items && item.items.length > 0 && (
+        {item.services && item.services.length > 0 && (
           <View style={styles.itemsPreview}>
             <Text style={styles.itemsLabel}>
-              {item.items.length} dịch vụ/thuốc
+              {item.services.length} dịch vụ/thuốc
             </Text>
           </View>
         )}
@@ -180,13 +186,13 @@ const AllBillsScreen = ({ navigation, route }) => {
         <View style={styles.billFooter}>
           <View>
             <Text style={styles.amountLabel}>Tổng tiền</Text>
-            <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount)}</Text>
+            <Text style={styles.totalAmount}>{formatCurrency(item.grandTotal || item.totalAmount)}</Text>
           </View>
-          {item.status === 'PARTIALLY_PAID' && (
+          {(item.status === 'PARTIAL' || item.status === 'PARTIALLY_PAID') && (
             <View>
               <Text style={styles.amountLabel}>Còn lại</Text>
               <Text style={styles.remainingAmount}>
-                {formatCurrency((item.totalAmount || 0) - (item.paidAmount || 0))}
+                {formatCurrency(item.balanceDue || (item.grandTotal || 0) - (item.amountPaid || 0))}
               </Text>
             </View>
           )}

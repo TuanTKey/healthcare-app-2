@@ -39,17 +39,17 @@ const BillingDashboard = ({ navigation }) => {
       const billsRes = await api.get('/bills');
       const bills = billsRes.data?.data?.data || billsRes.data?.data?.bills || billsRes.data?.data || [];
       
-      // Calculate stats
-      const pending = bills.filter(b => b.status === 'PENDING' || b.status === 'PARTIALLY_PAID');
+      // Calculate stats - sử dụng đúng field names từ API
+      const pending = bills.filter(b => b.status === 'ISSUED' || b.status === 'PARTIAL');
       const paid = bills.filter(b => b.status === 'PAID');
       
-      const totalRevenue = paid.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
-      const pendingAmount = pending.reduce((sum, b) => sum + ((b.totalAmount || 0) - (b.paidAmount || 0)), 0);
+      const totalRevenue = paid.reduce((sum, b) => sum + (b.grandTotal || b.totalAmount || 0), 0);
+      const pendingAmount = pending.reduce((sum, b) => sum + (b.balanceDue || (b.grandTotal || 0) - (b.amountPaid || 0)), 0);
       
       // Today's revenue
       const today = new Date().toDateString();
-      const todayBills = paid.filter(b => new Date(b.paidAt || b.updatedAt).toDateString() === today);
-      const todayRevenue = todayBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+      const todayBills = paid.filter(b => new Date(b.updatedAt).toDateString() === today);
+      const todayRevenue = todayBills.reduce((sum, b) => sum + (b.grandTotal || b.totalAmount || 0), 0);
 
       setStats({
         totalBills: bills.length,
@@ -95,8 +95,12 @@ const BillingDashboard = ({ navigation }) => {
     switch (status) {
       case 'PAID': return '#4caf50';
       case 'PENDING': return '#ff9800';
+      case 'ISSUED': return '#ff9800';
+      case 'PARTIAL': return '#2196f3';
       case 'PARTIALLY_PAID': return '#2196f3';
+      case 'OVERDUE': return '#f44336';
       case 'CANCELLED': return '#f44336';
+      case 'WRITTEN_OFF': return '#9e9e9e';
       case 'VOIDED': return '#9e9e9e';
       default: return '#757575';
     }
@@ -106,8 +110,12 @@ const BillingDashboard = ({ navigation }) => {
     switch (status) {
       case 'PAID': return 'Đã thanh toán';
       case 'PENDING': return 'Chờ thanh toán';
+      case 'ISSUED': return 'Chờ thanh toán';
+      case 'PARTIAL': return 'Thanh toán một phần';
       case 'PARTIALLY_PAID': return 'Thanh toán một phần';
+      case 'OVERDUE': return 'Quá hạn';
       case 'CANCELLED': return 'Đã hủy';
+      case 'WRITTEN_OFF': return 'Đã xóa';
       case 'VOIDED': return 'Đã vô hiệu';
       default: return status;
     }
@@ -260,15 +268,14 @@ const BillingDashboard = ({ navigation }) => {
                 <View style={styles.billInfo}>
                   <Text style={styles.billId}>#{bill.billNumber || bill._id?.slice(-6)}</Text>
                   <Text style={styles.billPatient}>
-                    {bill.patient?.personalInfo?.firstName} {bill.patient?.personalInfo?.lastName}
-                    {bill.patient?.name && ` - ${bill.patient.name}`}
+                    {bill.patientId?.personalInfo?.firstName} {bill.patientId?.personalInfo?.lastName}
                   </Text>
                   <Text style={styles.billDate}>
                     {new Date(bill.createdAt).toLocaleDateString('vi-VN')}
                   </Text>
                 </View>
                 <View style={styles.billRight}>
-                  <Text style={styles.billAmount}>{formatCurrency(bill.totalAmount)}</Text>
+                  <Text style={styles.billAmount}>{formatCurrency(bill.grandTotal || bill.totalAmount)}</Text>
                   <Chip
                     style={[styles.statusChip, { backgroundColor: getStatusColor(bill.status) + '20' }]}
                     textStyle={[styles.statusText, { color: getStatusColor(bill.status) }]}
