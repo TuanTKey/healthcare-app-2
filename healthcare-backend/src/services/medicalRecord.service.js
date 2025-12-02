@@ -303,15 +303,6 @@ class MedicalRecordService {
       throw error;
     }
   }
-          hasPrev: page > 1
-        }
-      };
-
-    } catch (error) {
-      console.error('❌ [MEDICAL] Get patient medical records failed:', error.message);
-      throw error;
-    }
-  }
 
   /**
    * 🎯 CẬP NHẬT HỒ SƠ BỆNH ÁN
