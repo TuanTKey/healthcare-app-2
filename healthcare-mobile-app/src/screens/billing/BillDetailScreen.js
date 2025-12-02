@@ -54,8 +54,12 @@ const BillDetailScreen = ({ navigation, route }) => {
     switch (status) {
       case 'PAID': return '#4caf50';
       case 'PENDING': return '#ff9800';
+      case 'ISSUED': return '#ff9800';
+      case 'PARTIAL': return '#2196f3';
       case 'PARTIALLY_PAID': return '#2196f3';
+      case 'OVERDUE': return '#f44336';
       case 'CANCELLED': return '#f44336';
+      case 'WRITTEN_OFF': return '#9e9e9e';
       case 'VOIDED': return '#9e9e9e';
       default: return '#757575';
     }
@@ -65,8 +69,12 @@ const BillDetailScreen = ({ navigation, route }) => {
     switch (status) {
       case 'PAID': return 'Đã thanh toán';
       case 'PENDING': return 'Chờ thanh toán';
+      case 'ISSUED': return 'Chờ thanh toán';
+      case 'PARTIAL': return 'Thanh toán một phần';
       case 'PARTIALLY_PAID': return 'Thanh toán một phần';
+      case 'OVERDUE': return 'Quá hạn';
       case 'CANCELLED': return 'Đã hủy';
+      case 'WRITTEN_OFF': return 'Đã xóa';
       case 'VOIDED': return 'Đã vô hiệu';
       default: return status;
     }
@@ -79,7 +87,7 @@ const BillDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    const remainingAmount = (bill.totalAmount || 0) - (bill.paidAmount || 0);
+    const remainingAmount = bill.balanceDue || (bill.grandTotal || 0) - (bill.amountPaid || 0);
     if (amount > remainingAmount) {
       Alert.alert('Lỗi', `Số tiền không được vượt quá ${formatCurrency(remainingAmount)}`);
       return;
@@ -156,8 +164,8 @@ const BillDetailScreen = ({ navigation, route }) => {
     );
   }
 
-  const remainingAmount = (bill.totalAmount || 0) - (bill.paidAmount || 0);
-  const canProcessPayment = bill.status === 'PENDING' || bill.status === 'PARTIALLY_PAID';
+  const remainingAmount = bill.balanceDue || (bill.grandTotal || 0) - (bill.amountPaid || 0);
+  const canProcessPayment = bill.status === 'ISSUED' || bill.status === 'PARTIAL' || bill.status === 'PENDING' || bill.status === 'PARTIALLY_PAID';
 
   const RadioOption = ({ label, value, selected, onSelect }) => (
     <TouchableOpacity 
@@ -207,20 +215,19 @@ const BillDetailScreen = ({ navigation, route }) => {
           <View style={styles.infoRow}>
             <MaterialIcons name="person" size={20} color="#666" />
             <Text style={styles.infoText}>
-              {bill.patient?.personalInfo?.firstName} {bill.patient?.personalInfo?.lastName}
-              {bill.patient?.name && ` (${bill.patient.name})`}
+              {bill.patientId?.personalInfo?.firstName} {bill.patientId?.personalInfo?.lastName}
             </Text>
           </View>
-          {bill.patient?.personalInfo?.phone && (
+          {bill.patientId?.personalInfo?.phone && (
             <View style={styles.infoRow}>
               <MaterialIcons name="phone" size={20} color="#666" />
-              <Text style={styles.infoText}>{bill.patient.personalInfo.phone}</Text>
+              <Text style={styles.infoText}>{bill.patientId.personalInfo.phone}</Text>
             </View>
           )}
-          {bill.patient?.email && (
+          {bill.patientId?.email && (
             <View style={styles.infoRow}>
               <MaterialIcons name="email" size={20} color="#666" />
-              <Text style={styles.infoText}>{bill.patient.email}</Text>
+              <Text style={styles.infoText}>{bill.patientId.email}</Text>
             </View>
           )}
         </Card>
@@ -228,17 +235,17 @@ const BillDetailScreen = ({ navigation, route }) => {
         {/* Bill Items */}
         <Card style={styles.card}>
           <Text style={styles.sectionTitle}>Chi tiết hóa đơn</Text>
-          {bill.items && bill.items.length > 0 ? (
-            bill.items.map((item, index) => (
+          {bill.services && bill.services.length > 0 ? (
+            bill.services.map((item, index) => (
               <View key={index} style={styles.itemRow}>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name || item.description}</Text>
+                  <Text style={styles.itemName}>{item.serviceName || item.name || item.description}</Text>
                   <Text style={styles.itemQuantity}>
                     {item.quantity} x {formatCurrency(item.unitPrice)}
                   </Text>
                 </View>
                 <Text style={styles.itemTotal}>
-                  {formatCurrency(item.quantity * item.unitPrice)}
+                  {formatCurrency(item.total || item.quantity * item.unitPrice)}
                 </Text>
               </View>
             ))
@@ -251,36 +258,36 @@ const BillDetailScreen = ({ navigation, route }) => {
           {/* Subtotals */}
           <View style={styles.subtotalRow}>
             <Text style={styles.subtotalLabel}>Tạm tính</Text>
-            <Text style={styles.subtotalValue}>{formatCurrency(bill.subtotal || bill.totalAmount)}</Text>
+            <Text style={styles.subtotalValue}>{formatCurrency(bill.subtotal || bill.grandTotal)}</Text>
           </View>
           
-          {bill.discount > 0 && (
+          {bill.totalDiscount > 0 && (
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>Giảm giá</Text>
               <Text style={[styles.subtotalValue, { color: '#4caf50' }]}>
-                -{formatCurrency(bill.discount)}
+                -{formatCurrency(bill.totalDiscount)}
               </Text>
             </View>
           )}
           
-          {bill.tax > 0 && (
+          {bill.totalTax > 0 && (
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>Thuế</Text>
-              <Text style={styles.subtotalValue}>{formatCurrency(bill.tax)}</Text>
+              <Text style={styles.subtotalValue}>{formatCurrency(bill.totalTax)}</Text>
             </View>
           )}
           
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Tổng cộng</Text>
-            <Text style={styles.totalValue}>{formatCurrency(bill.totalAmount)}</Text>
+            <Text style={styles.totalValue}>{formatCurrency(bill.grandTotal)}</Text>
           </View>
 
-          {bill.paidAmount > 0 && (
+          {bill.amountPaid > 0 && (
             <>
               <View style={styles.subtotalRow}>
                 <Text style={styles.subtotalLabel}>Đã thanh toán</Text>
                 <Text style={[styles.subtotalValue, { color: '#4caf50' }]}>
-                  {formatCurrency(bill.paidAmount)}
+                  {formatCurrency(bill.amountPaid)}
                 </Text>
               </View>
               <View style={styles.subtotalRow}>
