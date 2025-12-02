@@ -16,6 +16,7 @@ import PrescriptionDetailScreen from '../screens/admin/PrescriptionDetailScreen'
 import BillDetailScreen from '../screens/admin/BillDetailScreen';
 import MedicalRecordDetailScreen from '../screens/patient/MedicalRecordDetailScreen';
 import MedicalRecordEditScreen from '../screens/patient/MedicalRecordEditScreen';
+import AdminMedicalRecordDetailScreen from '../screens/admin/AdminMedicalRecordDetailScreen';
 
 // New admin management screens
 import SystemStatsScreen from '../screens/admin/SystemStatsScreen';
@@ -88,6 +89,14 @@ const AdminDashboardStack = () => (
     <Stack.Screen 
       name="MedicalRecordDetail"
       component={MedicalRecordDetailScreen}
+      options={{
+        title: 'Chi tiết lượt khám',
+        headerShown: true
+      }}
+    />
+    <Stack.Screen 
+      name="AdminMedicalRecordDetail"
+      component={AdminMedicalRecordDetailScreen}
       options={{
         title: 'Chi tiết hồ sơ bệnh án',
         headerShown: true
