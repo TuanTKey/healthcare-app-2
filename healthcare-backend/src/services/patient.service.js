@@ -577,26 +577,35 @@ class PatientService {
       const total = await Patient.countDocuments(query);
       const totalPages = Math.ceil(total / limit);
 
-      // 🎯 FORMAT KẾT QUẢ
-      const formattedPatients = patients.map(patient => ({
-        _id: patient._id,
-        patientId: patient.patientId,
-        personalInfo: patient.userId?.personalInfo || {},
-        email: patient.userId?.email,
-        phone: patient.userId?.personalInfo?.phone,
-        bloodType: patient.bloodType,
-        riskLevel: patient.riskLevel,
-        admissionStatus: patient.admissionStatus,
-        createdAt: patient.createdAt,
-        updatedAt: patient.updatedAt
-      }));
+      // 🎯 FORMAT KẾT QUẢ - Lọc bỏ orphan patients (không có userId)
+      const formattedPatients = patients
+        .filter(patient => patient.userId && patient.userId.personalInfo) // Chỉ lấy patients có user hợp lệ
+        .map(patient => ({
+          _id: patient._id,
+          patientId: patient.patientId,
+          personalInfo: patient.userId?.personalInfo || {},
+          email: patient.userId?.email,
+          phone: patient.userId?.personalInfo?.phone,
+          bloodType: patient.bloodType,
+          riskLevel: patient.riskLevel,
+          admissionStatus: patient.admissionStatus,
+          createdAt: patient.createdAt,
+          updatedAt: patient.updatedAt
+        }));
+
+      // Log orphan patients count for debugging
+      const orphanCount = patients.length - formattedPatients.length;
+      if (orphanCount > 0) {
+        console.warn(`⚠️ [SERVICE] Found ${orphanCount} orphan patients (no valid userId)`);
+      }
 
       return {
         patients: formattedPatients,
         pagination: {
           currentPage: page,
           totalPages,
-          totalPatients: total,
+          totalPatients: formattedPatients.length, // Đếm lại sau khi lọc
+          total: formattedPatients.length,
           hasNext: page < totalPages,
           hasPrev: page > 1
         },
