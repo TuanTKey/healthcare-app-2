@@ -10,6 +10,7 @@ import Card from '../../components/common/Card';
 const MedicalRecordsScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [records, setRecords] = useState([]);
+  const [medicalRecordId, setMedicalRecordId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -28,9 +29,12 @@ const MedicalRecordsScreen = ({ navigation }) => {
       
       // Parse response - API trả về { medicalRecord, visits, pagination }
       let recordsList = [];
+      let recordId = null;
+      
       if (response.data?.data?.visits && Array.isArray(response.data.data.visits)) {
-        // Cấu trúc mới: lấy danh sách visits
+        // Cấu trúc mới: lấy danh sách visits và recordId
         recordsList = response.data.data.visits;
+        recordId = response.data.data.medicalRecord?.recordId;
       } else if (response.data?.data?.medicalRecords && Array.isArray(response.data.data.medicalRecords)) {
         recordsList = response.data.data.medicalRecords;
       } else if (response.data?.data?.data && Array.isArray(response.data.data.data)) {
@@ -41,8 +45,9 @@ const MedicalRecordsScreen = ({ navigation }) => {
         recordsList = response.data;
       }
       
-      console.log('📋 Parsed records/visits count:', recordsList.length);
+      console.log('📋 Parsed records/visits count:', recordsList.length, 'recordId:', recordId);
       setRecords(recordsList);
+      setMedicalRecordId(recordId);
     } catch (error) {
       console.error('⚠️ Lỗi tải hồ sơ bệnh án:', error.message);
       setRecords([]);
@@ -199,7 +204,7 @@ const MedicalRecordsScreen = ({ navigation }) => {
                 style={styles.detailButton}
                 onPress={() => navigation.navigate('MedicalRecordDetail', { 
                   visitId: visit._id || visit.visitId,
-                  recordId: visit.recordId 
+                  recordId: medicalRecordId 
                 })}
               >
                 Xem chi tiết
