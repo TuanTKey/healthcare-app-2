@@ -9,6 +9,7 @@ import DoctorAppointments from '../screens/doctor/DoctorAppointments';
 import DoctorAppointmentDetail from '../screens/doctor/DoctorAppointmentDetail';
 import DoctorPatients from '../screens/doctor/DoctorPatients';
 import DoctorMedicalRecords from '../screens/doctor/DoctorMedicalRecords';
+import DoctorRecordDetail from '../screens/doctor/DoctorRecordDetail';
 import DoctorPrescriptions from '../screens/doctor/DoctorPrescriptions';
 import DoctorLabOrders from '../screens/doctor/DoctorLabOrders';
 import CreatePrescription from '../screens/doctor/CreatePrescription';
@@ -183,9 +184,9 @@ const DoctorNavigator = () => (
     />
     <Stack.Screen 
       name="DoctorRecordDetail" 
-      component={DoctorMedicalRecords}
+      component={DoctorRecordDetail}
       options={{
-        headerShown: true,
+        headerShown: false,
         title: 'Chi tiết hồ sơ'
       }}
     />
