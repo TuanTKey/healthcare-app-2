@@ -162,8 +162,8 @@ const AdminDashboard = () => {
           deletedUsers = userStats.summary.deletedUsers || 0;
         }
         
-        // Parse byRoleAll array để lấy tổng TẤT CẢ users theo role (kể cả đã xóa)
-        const roleArray = userStats.byRoleAll || userStats.byRole || [];
+        // Parse byRole array để lấy users ĐANG HOẠT ĐỘNG (chưa xóa)
+        const roleArray = userStats.byRole || [];
         if (Array.isArray(roleArray)) {
           for (const roleData of roleArray) {
             if (roleData._id === 'PATIENT') {
