@@ -65,19 +65,31 @@ const DoctorDashboard = () => {
 
         const today = new Date().toDateString();
         
+        // Đếm thống kê
+        let todayTotal = 0;      // Tổng lịch hôm nay (không tính đã hủy)
+        let todayCompleted = 0;  // Đã hoàn thành hôm nay
+        let todayPending = 0;    // Chờ khám hôm nay (chưa hoàn thành)
+        
         appointments.forEach(apt => {
-          // Sử dụng appointmentDate thay vì date
           const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
-          if (aptDate === today) {
-            todayAppts++;
+          
+          if (aptDate === today && apt.status !== 'CANCELLED') {
+            todayTotal++;
             if (apt.status === 'COMPLETED') {
-              completedAppts++;
+              todayCompleted++;
+            } else {
+              todayPending++;
             }
           }
+          
+          // Đếm tổng chờ khám (tất cả ngày)
           if (['PENDING', 'SCHEDULED', 'CONFIRMED'].includes(apt.status)) {
             pendingAppts++;
           }
         });
+        
+        todayAppts = todayTotal;
+        completedAppts = todayCompleted;
 
         // Lấy lịch hôm nay - hiển thị tất cả (kể cả hoàn thành), chỉ bỏ đã hủy
         const todayAppointments = appointments
