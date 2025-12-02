@@ -79,7 +79,7 @@ class PrescriptionService {
       }
 
       // Tạo prescription ID
-      const prescriptionId = await generateMedicalCode('PR');
+      const prescriptionId = `PR${generateMedicalCode(8)}`;
 
       // Kiểm tra tồn kho và thông tin thuốc
       for (let med of prescriptionData.medications) {
@@ -141,7 +141,7 @@ class PrescriptionService {
       }
 
       // Tạo prescription ID
-      const prescriptionId = await generateMedicalCode('PR');
+      const prescriptionId = `PR${generateMedicalCode(8)}`;
 
       // Transform medications để phù hợp với schema
       const transformedMedications = prescriptionData.medications.map(med => ({
@@ -538,7 +538,7 @@ class PrescriptionService {
 
   // Thêm thuốc mới vào kho
   async addMedication(medicationData, userId) {
-    const medicationId = await generateMedicalCode('MED');
+    const medicationId = `MED${generateMedicalCode(8)}`;
     
     const medication = new Medication({
       medicationId,
