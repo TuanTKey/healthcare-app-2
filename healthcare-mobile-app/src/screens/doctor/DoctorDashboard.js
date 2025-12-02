@@ -79,11 +79,11 @@ const DoctorDashboard = () => {
           }
         });
 
-        // Lấy lịch hôm nay - sắp xếp theo giờ
+        // Lấy lịch hôm nay - hiển thị tất cả (kể cả hoàn thành), chỉ bỏ đã hủy
         const todayAppointments = appointments
           .filter(apt => {
             const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
-            return aptDate === today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+            return aptDate === today && apt.status !== 'CANCELLED';
           })
           .sort((a, b) => 
             new Date(a.scheduledTime || a.appointmentDate || a.date) - 
@@ -179,13 +179,36 @@ const DoctorDashboard = () => {
   );
 
   const AppointmentItem = ({ appointment }) => {
-    const time = new Date(appointment.scheduledTime || appointment.date);
+    const time = new Date(appointment.scheduledTime || appointment.appointmentDate || appointment.date);
     const statusColors = {
       'PENDING': '#FF9800',
+      'SCHEDULED': '#FF9800',
       'CONFIRMED': '#2196F3',
       'IN_PROGRESS': '#9C27B0',
       'COMPLETED': '#4CAF50',
       'CANCELLED': '#F44336'
+    };
+    
+    const statusTexts = {
+      'PENDING': 'Chờ xác nhận',
+      'SCHEDULED': 'Đã lên lịch',
+      'CONFIRMED': 'Đã xác nhận',
+      'IN_PROGRESS': 'Đang khám',
+      'COMPLETED': 'Hoàn thành',
+      'CANCELLED': 'Đã hủy'
+    };
+    
+    // Lấy tên bệnh nhân
+    const getPatientName = () => {
+      if (appointment.patientId?.personalInfo) {
+        const info = appointment.patientId.personalInfo;
+        return `${info.firstName || ''} ${info.lastName || ''}`.trim();
+      }
+      if (appointment.patient?.userId?.personalInfo) {
+        const info = appointment.patient.userId.personalInfo;
+        return `${info.firstName || ''} ${info.lastName || ''}`.trim();
+      }
+      return 'Bệnh nhân';
     };
 
     return (
@@ -199,13 +222,11 @@ const DoctorDashboard = () => {
           </Text>
         </View>
         <View style={styles.appointmentInfo}>
-          <Text style={styles.patientName}>
-            {appointment.patientId?.personalInfo?.firstName || appointment.patient?.userId?.personalInfo?.firstName || ''} {appointment.patientId?.personalInfo?.lastName || appointment.patient?.userId?.personalInfo?.lastName || ''}
-          </Text>
-          <Text style={styles.appointmentType}>{appointment.type || 'Khám bệnh'}</Text>
+          <Text style={styles.patientName}>{getPatientName()}</Text>
+          <Text style={styles.appointmentType}>{appointment.reason || appointment.type || 'Khám bệnh'}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColors[appointment.status] || '#999' }]}>
-          <Text style={styles.statusText}>{appointment.status}</Text>
+          <Text style={styles.statusText}>{statusTexts[appointment.status] || appointment.status}</Text>
         </View>
       </TouchableOpacity>
     );
