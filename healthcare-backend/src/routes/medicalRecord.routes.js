@@ -54,6 +54,14 @@ router.get(
   medicalRecordController.getMedicalRecord
 );
 
+// 🎯 LẤY CHI TIẾT 1 LƯỢT KHÁM (VISIT)
+router.get(
+  '/:recordId/visits/:visitId',
+  requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.HOSPITAL_ADMIN, ROLES.PATIENT),
+  requirePermission(PERMISSIONS.VIEW_MEDICAL_RECORDS),
+  medicalRecordController.getVisitDetail
+);
+
 // 🎯 CẬP NHẬT HỒ SƠ BỆNH ÁN
 router.put(
   '/:recordId',

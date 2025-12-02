@@ -11,40 +11,37 @@ import Chip from '../../components/common/Chip';
 
 const MedicalRecordDetailScreen = ({ route, navigation }) => {
   const user = useSelector(state => state.auth.user);
-  const { recordId } = route.params;
-  const [record, setRecord] = useState(null);
+  const { recordId, visitId } = route.params;
+  const [visit, setVisit] = useState(null);
+  const [medicalRecord, setMedicalRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    loadRecordDetail();
+    loadVisitDetail();
     // Set header title
     navigation.setOptions({
-      title: 'Chi tiết hồ sơ bệnh án',
+      title: 'Chi tiết lượt khám',
       headerShown: true,
     });
-  }, [recordId]);
+  }, [recordId, visitId]);
 
-  const loadRecordDetail = async () => {
+  const loadVisitDetail = async () => {
     try {
       setLoading(true);
-      console.log('📋 Fetching medical record detail:', recordId);
+      console.log('📋 Fetching visit detail:', visitId, 'from record:', recordId);
       
-      const response = await api.get(`/medical-records/${recordId}`);
-      console.log('📋 Medical record detail response:', response.data);
+      // Sử dụng endpoint mới để lấy chi tiết visit
+      const response = await api.get(`/medical-records/${recordId}/visits/${visitId}`);
+      console.log('📋 Visit detail response:', response.data);
       
-      let recordData = null;
       if (response.data?.data) {
-        recordData = response.data.data;
-      } else if (response.data) {
-        recordData = response.data;
+        setVisit(response.data.data.visit);
+        setMedicalRecord(response.data.data.medicalRecord);
       }
-      
-      setRecord(recordData);
     } catch (error) {
-      console.error('❌ Lỗi tải chi tiết hồ sơ:', error.message);
-      Alert.alert('Lỗi', 'Không thể tải chi tiết hồ sơ bệnh án');
+      console.error('❌ Lỗi tải chi tiết lượt khám:', error.message);
+      Alert.alert('Lỗi', 'Không thể tải chi tiết lượt khám');
     } finally {
       setLoading(false);
     }
@@ -52,59 +49,24 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRecordDetail();
+    await loadVisitDetail();
     setRefreshing(false);
-  };
-
-  const handleEdit = () => {
-    navigation.navigate('MedicalRecordEdit', { recordId, record });
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Xóa hồ sơ bệnh án',
-      'Bạn có chắc muốn xóa hồ sơ bệnh án này? Hành động này không thể hoàn tác.',
-      [
-        { text: 'Hủy', onPress: () => {}, style: 'cancel' },
-        {
-          text: 'Xóa',
-          onPress: async () => {
-            try {
-              setDeleting(true);
-              console.log('🗑️ Deleting medical record:', recordId);
-              
-              const response = await api.delete(`/medical-records/${recordId}`);
-              console.log('🗑️ Delete response:', response.data);
-              
-              Alert.alert('Thành công', 'Hồ sơ bệnh án đã được xóa');
-              navigation.goBack();
-            } catch (error) {
-              console.error('❌ Lỗi xóa hồ sơ:', error.message);
-              Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xóa hồ sơ');
-            } finally {
-              setDeleting(false);
-            }
-          },
-          style: 'destructive',
-        },
-      ]
-    );
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Đang tải chi tiết hồ sơ...</Text>
+        <Text style={styles.loadingText}>Đang tải chi tiết lượt khám...</Text>
       </View>
     );
   }
 
-  if (!record) {
+  if (!visit) {
     return (
       <View style={styles.centerContainer}>
         <MaterialIcons name="error-outline" size={48} color="#ccc" />
-        <Text style={styles.errorText}>Không tìm thấy hồ sơ</Text>
+        <Text style={styles.errorText}>Không tìm thấy lượt khám</Text>
       </View>
     );
   }
@@ -172,16 +134,16 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
           <View style={styles.headerTop}>
             <View style={styles.recordIdSection}>
               <Text variant="bodySmall" style={styles.label}>
-                MÃ HỒ SƠ
+                MÃ LƯỢT KHÁM
               </Text>
               <Text variant="titleMedium" style={styles.recordId}>
-                {record.recordId || 'N/A'}
+                {visit.visitId || 'N/A'}
               </Text>
             </View>
             <Chip
-              style={{ backgroundColor: getStatusColor(record.status) }}
+              style={{ backgroundColor: getStatusColor(visit.status) }}
               textStyle={{ color: 'white' }}
-              label={getStatusLabel(record.status)}
+              label={getStatusLabel(visit.status)}
             />
           </View>
 
@@ -195,7 +157,7 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
                   NGÀY KHÁM
                 </Text>
                 <Text variant="bodyMedium" style={styles.value}>
-                  {formatDate(record.visitDate)}
+                  {formatDate(visit.visitDate)}
                 </Text>
               </View>
             </View>
@@ -207,7 +169,7 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
                   LOẠI KHÁM
                 </Text>
                 <Text variant="bodyMedium" style={styles.value}>
-                  {getVisitTypeLabel(record.visitType)}
+                  {getVisitTypeLabel(visit.visitType)}
                 </Text>
               </View>
             </View>
@@ -221,12 +183,12 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
                   KHOA
                 </Text>
                 <Text variant="bodyMedium" style={styles.value}>
-                  {record.department || 'N/A'}
+                  {visit.department || 'N/A'}
                 </Text>
               </View>
             </View>
 
-            {record.doctorId && (
+            {visit.doctorId && (
               <View style={styles.infoItem}>
                 <MaterialIcons name="person" size={20} color="#666" />
                 <View style={styles.infoContent}>
@@ -234,7 +196,7 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
                     BÁC SĨ
                   </Text>
                   <Text variant="bodyMedium" style={styles.value}>
-                    {record.doctorId?.personalInfo?.firstName || record.doctorId?.email || 'N/A'}
+                    {visit.doctorId?.personalInfo?.firstName || visit.doctorId?.email || 'N/A'}
                   </Text>
                 </View>
               </View>
@@ -244,42 +206,42 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       </Card>
 
       {/* Chief Complaint */}
-      {record.chiefComplaint && (
+      {visit.chiefComplaint && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               LÝ DO KHÁM
             </Text>
             <Text variant="bodyMedium" style={styles.sectionContent}>
-              {record.chiefComplaint}
+              {visit.chiefComplaint}
             </Text>
           </Card.Content>
         </Card>
       )}
 
       {/* History of Present Illness */}
-      {record.historyOfPresentIllness && (
+      {visit.historyOfPresentIllness && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               LỊCH SỬ BỆNH LÝ HIỆN TẠI
             </Text>
             <Text variant="bodyMedium" style={styles.sectionContent}>
-              {record.historyOfPresentIllness}
+              {visit.historyOfPresentIllness}
             </Text>
           </Card.Content>
         </Card>
       )}
 
       {/* Symptoms */}
-      {record.symptoms && record.symptoms.length > 0 && (
+      {visit.symptoms && visit.symptoms.length > 0 && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               TRIỆU CHỨNG
             </Text>
             <View style={styles.itemsList}>
-              {record.symptoms.map((symptom, index) => (
+              {visit.symptoms.map((symptom, index) => (
                 <View key={index} style={styles.listItem}>
                   <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
                   <Text variant="bodyMedium" style={styles.listItemText}>
@@ -293,50 +255,50 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       )}
 
       {/* Vital Signs */}
-      {record.vitalSigns && Object.keys(record.vitalSigns).length > 0 && (
+      {visit.vitalSigns && Object.keys(visit.vitalSigns).length > 0 && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               DẤU HIỆU SINH TỒN
             </Text>
             <View style={styles.vitalSignsGrid}>
-              {record.vitalSigns.bloodPressure && (
+              {visit.vitalSigns.bloodPressure && (
                 <View style={styles.vitalItem}>
                   <Text variant="bodySmall" style={styles.vitalLabel}>
                     Huyết áp
                   </Text>
                   <Text variant="bodyMedium" style={styles.vitalValue}>
-                    {record.vitalSigns.bloodPressure.systolic || 0}/{record.vitalSigns.bloodPressure.diastolic || 0} mmHg
+                    {visit.vitalSigns.bloodPressure.systolic || 0}/{visit.vitalSigns.bloodPressure.diastolic || 0} mmHg
                   </Text>
                 </View>
               )}
-              {record.vitalSigns.heartRate && (
+              {visit.vitalSigns.heartRate && (
                 <View style={styles.vitalItem}>
                   <Text variant="bodySmall" style={styles.vitalLabel}>
                     Nhịp tim
                   </Text>
                   <Text variant="bodyMedium" style={styles.vitalValue}>
-                    {record.vitalSigns.heartRate} bpm
+                    {visit.vitalSigns.heartRate} bpm
                   </Text>
                 </View>
               )}
-              {record.vitalSigns.temperature && (
+              {visit.vitalSigns.temperature && (
                 <View style={styles.vitalItem}>
                   <Text variant="bodySmall" style={styles.vitalLabel}>
                     Nhiệt độ
                   </Text>
                   <Text variant="bodyMedium" style={styles.vitalValue}>
-                    {record.vitalSigns.temperature}°C
+                    {visit.vitalSigns.temperature}°C
                   </Text>
                 </View>
               )}
-              {record.vitalSigns.respiratoryRate && (
+              {visit.vitalSigns.respiratoryRate && (
                 <View style={styles.vitalItem}>
                   <Text variant="bodySmall" style={styles.vitalLabel}>
                     Nhịp thở
                   </Text>
                   <Text variant="bodyMedium" style={styles.vitalValue}>
-                    {record.vitalSigns.respiratoryRate} lần/phút
+                    {visit.vitalSigns.respiratoryRate} lần/phút
                   </Text>
                 </View>
               )}
@@ -346,30 +308,30 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       )}
 
       {/* Physical Examination */}
-      {record.physicalExamination && (
+      {visit.physicalExamination && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
-              KHÁM LÂMÀN SÀNG
+              KHÁM LÂM SÀNG
             </Text>
             <Text variant="bodyMedium" style={styles.sectionContent}>
-              {typeof record.physicalExamination === 'string'
-                ? record.physicalExamination
-                : record.physicalExamination.findings || 'N/A'}
+              {typeof visit.physicalExamination === 'string'
+                ? visit.physicalExamination
+                : visit.physicalExamination.findings || 'N/A'}
             </Text>
           </Card.Content>
         </Card>
       )}
 
       {/* Diagnoses */}
-      {record.diagnoses && record.diagnoses.length > 0 && (
+      {visit.diagnoses && visit.diagnoses.length > 0 && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               CHẨN ĐOÁN
             </Text>
             <View style={styles.itemsList}>
-              {record.diagnoses.map((diagnosis, index) => (
+              {visit.diagnoses.map((diagnosis, index) => (
                 <View key={index} style={[styles.listItem, styles.diagnosisItem]}>
                   <MaterialIcons name="warning" size={16} color="#FF5722" />
                   <View style={{ flex: 1 }}>
@@ -390,30 +352,30 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       )}
 
       {/* Treatment Plan */}
-      {record.treatmentPlan && (
+      {visit.treatmentPlan && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
-              KỊ HOẠCH ĐIỀU TRỊ
+              KẾ HOẠCH ĐIỀU TRỊ
             </Text>
             <Text variant="bodyMedium" style={styles.sectionContent}>
-              {typeof record.treatmentPlan === 'string'
-                ? record.treatmentPlan
-                : record.treatmentPlan.description || 'N/A'}
+              {typeof visit.treatmentPlan === 'string'
+                ? visit.treatmentPlan
+                : visit.treatmentPlan.description || visit.treatmentPlan.recommendations || 'N/A'}
             </Text>
           </Card.Content>
         </Card>
       )}
 
       {/* Notes */}
-      {record.notes && (
+      {visit.notes && (
         <Card style={styles.sectionCard}>
           <Card.Content>
             <Text variant="titleSmall" style={styles.sectionTitle}>
               GHI CHÚ THÊM
             </Text>
             <Text variant="bodyMedium" style={styles.sectionContent}>
-              {record.notes}
+              {visit.notes}
             </Text>
           </Card.Content>
         </Card>
@@ -422,31 +384,17 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       {/* Footer Info */}
       <Card style={styles.footerCard}>
         <Card.Content>
-          {record.createdBy && (
+          {medicalRecord?.recordId && (
             <View style={styles.footerItem}>
               <Text variant="bodySmall" style={styles.footerLabel}>
-                Người tạo: {record.createdBy?.personalInfo?.firstName || record.createdBy?.email || 'N/A'}
+                Mã hồ sơ: {medicalRecord.recordId}
               </Text>
             </View>
           )}
-          {record.createdAt && (
+          {visit.createdAt && (
             <View style={styles.footerItem}>
               <Text variant="bodySmall" style={styles.footerLabel}>
-                Ngày tạo: {formatDate(record.createdAt)}
-              </Text>
-            </View>
-          )}
-          {record.lastModifiedBy && (
-            <View style={styles.footerItem}>
-              <Text variant="bodySmall" style={styles.footerLabel}>
-                Cập nhật: {record.lastModifiedBy?.personalInfo?.firstName || record.lastModifiedBy?.email || 'N/A'}
-              </Text>
-            </View>
-          )}
-          {record.updatedAt && (
-            <View style={styles.footerItem}>
-              <Text variant="bodySmall" style={styles.footerLabel}>
-                Lần cuối: {formatDate(record.updatedAt)}
+                Ngày tạo: {formatDate(visit.createdAt)}
               </Text>
             </View>
           )}
@@ -455,29 +403,6 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        {user?.role === 'HOSPITAL_ADMIN' || user?.role === 'DOCTOR' ? (
-          <>
-            <Button
-              mode="contained"
-              style={[styles.actionButton, styles.editButton]}
-              icon="pencil"
-              onPress={handleEdit}
-              disabled={deleting}
-            >
-              Sửa
-            </Button>
-            <Button
-              mode="contained"
-              style={[styles.actionButton, styles.deleteButton]}
-              icon="trash-can"
-              onPress={handleDelete}
-              loading={deleting}
-              disabled={deleting}
-            >
-              Xóa
-            </Button>
-          </>
-        ) : null}
         <Button
           mode="outlined"
           style={styles.actionButton}

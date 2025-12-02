@@ -173,6 +173,57 @@ class MedicalRecordService {
   }
 
   /**
+   * 🎯 LẤY CHI TIẾT 1 LƯỢT KHÁM (VISIT) CỤ THỂ
+   */
+  async getVisitDetail(recordId, visitId) {
+    try {
+      console.log('🔍 [MEDICAL] Getting visit detail:', visitId, 'from record:', recordId);
+
+      // Tìm hồ sơ bệnh án
+      let medicalRecord = await MedicalRecord.findOne({ recordId })
+        .populate('patientId', 'personalInfo email phone dateOfBirth gender');
+
+      // Nếu không tìm thấy theo recordId, thử tìm theo _id
+      if (!medicalRecord) {
+        medicalRecord = await MedicalRecord.findById(recordId)
+          .populate('patientId', 'personalInfo email phone dateOfBirth gender');
+      }
+
+      if (!medicalRecord) {
+        throw new AppError('Không tìm thấy hồ sơ bệnh án', 404, ERROR_CODES.MEDICAL_RECORD_NOT_FOUND);
+      }
+
+      // Tìm visit trong mảng visits
+      const visit = medicalRecord.visits.find(v => 
+        v.visitId === visitId || v._id?.toString() === visitId
+      );
+
+      if (!visit) {
+        throw new AppError('Không tìm thấy lượt khám', 404);
+      }
+
+      // Populate doctorId cho visit
+      await MedicalRecord.populate(visit, {
+        path: 'doctorId',
+        select: 'personalInfo email phone specialization department'
+      });
+
+      return {
+        medicalRecord: {
+          recordId: medicalRecord.recordId,
+          patientId: medicalRecord.patientId,
+          patientInfo: medicalRecord.patientInfo
+        },
+        visit
+      };
+
+    } catch (error) {
+      console.error('❌ [MEDICAL] Get visit detail failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * 🎯 LẤY HỒ SƠ BỆNH ÁN CỦA BỆNH NHÂN (1 bệnh nhân = 1 hồ sơ với nhiều lượt khám)
    */
   async getPatientMedicalRecords(patientId, filters = {}) {

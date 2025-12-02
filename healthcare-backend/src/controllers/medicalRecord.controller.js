@@ -48,6 +48,28 @@ class MedicalRecordController {
   }
 
   /**
+   * 🎯 LẤY CHI TIẾT 1 LƯỢT KHÁM (VISIT)
+   */
+  async getVisitDetail(req, res, next) {
+    try {
+      const { recordId, visitId } = req.params;
+      
+      console.log('🔍 [MEDICAL] Getting visit detail:', visitId, 'from record:', recordId);
+
+      const result = await medicalRecordService.getVisitDetail(recordId, visitId);
+
+      res.json({
+        success: true,
+        message: 'Lấy chi tiết lượt khám thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 🎯 LẤY THÔNG TIN HỒ SƠ BỆNH ÁN
    */
   async getMedicalRecord(req, res, next) {
