@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, Text, ActivityIndicator, Alert } from 'react-native';
 import { useSelector } from 'react-redux';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Chip from '../../components/common/Chip';
+import api from '../../services/api';
 
 const PrescriptionsScreen = () => {
   const { user } = useSelector(state => state.auth);
@@ -13,41 +14,44 @@ const PrescriptionsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const mockPrescriptions = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      doctor: 'BS. Nguyễn Văn A',
-      medications: [
-        { name: 'Amoxicillin 500mg', dosage: '1 viên', frequency: '3 lần/ngày', duration: '7 ngày' },
-        { name: 'Paracetamol 500mg', dosage: '1 viên', frequency: 'Khi sốt', duration: '3 ngày' }
-      ],
-      status: 'active',
-      instructions: 'Uống sau ăn. Tái khám sau 7 ngày.'
-    },
-    {
-      id: '2',
-      date: '2024-01-10',
-      doctor: 'BS. Trần Thị B',
-      medications: [
-        { name: 'Loratadine 10mg', dosage: '1 viên', frequency: '1 lần/ngày', duration: '10 ngày' },
-        { name: 'Kem bôi Cortioid', dosage: 'lượng nhỏ', frequency: '2 lần/ngày', duration: '7 ngày' }
-      ],
-      status: 'completed',
-      instructions: 'Bôi kem lên vùng da tổn thương. Tránh tiếp xúc ánh nắng.'
-    }
-  ];
-
   useEffect(() => {
     loadPrescriptions();
   }, []);
 
   const loadPrescriptions = async () => {
-    setLoading(true);
-    setTimeout(() => {
-      setPrescriptions(mockPrescriptions);
+    try {
+      setLoading(true);
+      
+      // Lấy đơn thuốc theo userId của bệnh nhân đang đăng nhập
+      const patientId = user?._id || user?.id;
+      
+      if (!patientId) {
+        console.log('No patient ID found');
+        setPrescriptions([]);
+        return;
+      }
+
+      const response = await api.get(`/prescriptions/patients/${patientId}/prescriptions`);
+      console.log('Prescriptions response:', response.data);
+      
+      if (response.data.success) {
+        const data = response.data.data;
+        // data có thể là { prescriptions: [...], pagination: {...} } hoặc trực tiếp là array
+        const prescriptionsData = data.prescriptions || data || [];
+        setPrescriptions(prescriptionsData);
+      } else {
+        setPrescriptions([]);
+      }
+    } catch (error) {
+      console.error('Error loading prescriptions:', error);
+      // Nếu lỗi 404 hoặc không có dữ liệu, không hiện alert
+      if (error.response?.status !== 404) {
+        Alert.alert('Lỗi', 'Không thể tải danh sách đơn thuốc');
+      }
+      setPrescriptions([]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const onRefresh = async () => {
@@ -57,21 +61,69 @@ const PrescriptionsScreen = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return '#4caf50';
-      case 'completed': return '#2196f3';
-      case 'cancelled': return '#f44336';
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case 'ACTIVE': return '#4caf50';
+      case 'COMPLETED': 
+      case 'DISPENSED': return '#2196f3';
+      case 'CANCELLED': return '#f44336';
+      case 'PARTIAL': return '#ff9800';
+      case 'PENDING': return '#9e9e9e';
       default: return '#999';
     }
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case 'active': return 'ĐANG SỬ DỤNG';
-      case 'completed': return 'HOÀN THÀNH';
-      case 'cancelled': return 'ĐÃ HỦY';
-      default: return status;
+    const statusUpper = status?.toUpperCase();
+    switch (statusUpper) {
+      case 'ACTIVE': return 'ĐANG SỬ DỤNG';
+      case 'COMPLETED': return 'HOÀN THÀNH';
+      case 'DISPENSED': return 'ĐÃ PHÁT THUỐC';
+      case 'CANCELLED': return 'ĐÃ HỦY';
+      case 'PARTIAL': return 'PHÁT MỘT PHẦN';
+      case 'PENDING': return 'CHỜ XỬ LÝ';
+      default: return status || 'N/A';
     }
+  };
+
+  // Helper để lấy thông tin thuốc từ prescription
+  const formatMedication = (med) => {
+    return {
+      name: med.name || med.medicationId?.name || 'Không rõ',
+      dosage: typeof med.dosage === 'object' 
+        ? `${med.dosage.value || 1} ${med.dosage.unit || 'viên'}` 
+        : med.dosage || '',
+      frequency: typeof med.frequency === 'object'
+        ? med.frequency.instructions || `${med.frequency.timesPerDay || 1} lần/ngày`
+        : med.frequency || '',
+      duration: typeof med.duration === 'object'
+        ? `${med.duration.value || ''} ${med.duration.unit === 'days' ? 'ngày' : med.duration.unit || ''}`
+        : med.duration || ''
+    };
+  };
+
+  // Helper để lấy tên bác sĩ
+  const getDoctorName = (prescription) => {
+    if (prescription.doctorId?.personalInfo?.fullName) {
+      return `BS. ${prescription.doctorId.personalInfo.fullName}`;
+    }
+    if (prescription.doctorId?.email) {
+      return prescription.doctorId.email;
+    }
+    return 'Bác sĩ';
+  };
+
+  // Helper để lấy ngày kê đơn
+  const getPrescriptionDate = (prescription) => {
+    const dateStr = prescription.issueDate || prescription.createdAt;
+    if (dateStr) {
+      try {
+        return format(new Date(dateStr), 'dd/MM/yyyy');
+      } catch (e) {
+        return 'N/A';
+      }
+    }
+    return 'N/A';
   };
 
   if (loading) {
@@ -113,15 +165,18 @@ const PrescriptionsScreen = () => {
         </Card>
       ) : (
         prescriptions.map((prescription) => (
-          <Card key={prescription.id} style={styles.prescriptionCard}>
+          <Card key={prescription._id || prescription.prescriptionId} style={styles.prescriptionCard}>
             <Card.Content>
               <View style={styles.cardHeader}>
                 <View>
                   <Text variant="titleMedium" style={styles.doctorName}>
-                    {prescription.doctor}
+                    {getDoctorName(prescription)}
                   </Text>
                   <Text variant="bodySmall" style={styles.date}>
-                    {format(new Date(prescription.date), 'dd/MM/yyyy')}
+                    {getPrescriptionDate(prescription)}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.prescriptionId}>
+                    Mã đơn: {prescription.prescriptionId || 'N/A'}
                   </Text>
                 </View>
                 <Chip 
@@ -137,47 +192,56 @@ const PrescriptionsScreen = () => {
 
               <View style={styles.medicationsSection}>
                 <Text variant="titleSmall" style={styles.sectionTitle}>
-                  Thuốc được kê
+                  Thuốc được kê ({prescription.medications?.length || 0})
                 </Text>
-                {prescription.medications.map((med, index) => (
-                  <View key={index} style={styles.medicationItem}>
-                    <View style={styles.medHeader}>
-                      <MaterialIcons name="local-pharmacy" size={16} color="#4caf50" />
-                      <Text variant="bodyMedium" style={styles.medName}>
-                        {med.name}
-                      </Text>
+                {prescription.medications?.map((med, index) => {
+                  const formattedMed = formatMedication(med);
+                  return (
+                    <View key={index} style={styles.medicationItem}>
+                      <View style={styles.medHeader}>
+                        <MaterialIcons name="local-pharmacy" size={16} color="#4caf50" />
+                        <Text variant="bodyMedium" style={styles.medName}>
+                          {formattedMed.name}
+                        </Text>
+                      </View>
+                      <View style={formattedMed.dosage ? styles.medDetails : null}>
+                        {formattedMed.dosage && (
+                          <Text variant="bodySmall" style={styles.medDetail}>
+                            <Text style={styles.detailLabel}>Liều lượng: </Text>
+                            {formattedMed.dosage}
+                          </Text>
+                        )}
+                        {formattedMed.frequency && (
+                          <Text variant="bodySmall" style={styles.medDetail}>
+                            <Text style={styles.detailLabel}>Tần suất: </Text>
+                            {formattedMed.frequency}
+                          </Text>
+                        )}
+                        {formattedMed.duration && (
+                          <Text variant="bodySmall" style={styles.medDetail}>
+                            <Text style={styles.detailLabel}>Thời gian: </Text>
+                            {formattedMed.duration}
+                          </Text>
+                        )}
+                        {med.instructions && (
+                          <Text variant="bodySmall" style={styles.medDetail}>
+                            <Text style={styles.detailLabel}>Hướng dẫn: </Text>
+                            {med.instructions}
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                    <View style={med.dosage ? styles.medDetails : null}>
-                      {med.dosage && (
-                        <Text variant="bodySmall" style={styles.medDetail}>
-                          <Text style={styles.detailLabel}>Liều lượng: </Text>
-                          {med.dosage}
-                        </Text>
-                      )}
-                      {med.frequency && (
-                        <Text variant="bodySmall" style={styles.medDetail}>
-                          <Text style={styles.detailLabel}>Tần suất: </Text>
-                          {med.frequency}
-                        </Text>
-                      )}
-                      {med.duration && (
-                        <Text variant="bodySmall" style={styles.medDetail}>
-                          <Text style={styles.detailLabel}>Thời gian: </Text>
-                          {med.duration}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
 
-              {prescription.instructions && (
+              {(prescription.notes || prescription.specialInstructions) && (
                 <View style={styles.instructionsSection}>
                   <Text variant="titleSmall" style={styles.sectionTitle}>
-                    Hướng dẫn sử dụng
+                    Ghi chú / Hướng dẫn
                   </Text>
                   <Text variant="bodyMedium" style={styles.instructionsText}>
-                    {prescription.instructions}
+                    {prescription.specialInstructions || prescription.notes}
                   </Text>
                 </View>
               )}
@@ -245,6 +309,11 @@ const styles = StyleSheet.create({
   },
   date: {
     color: '#666',
+    marginTop: 2,
+  },
+  prescriptionId: {
+    color: '#999',
+    fontSize: 11,
     marginTop: 2,
   },
   statusChip: {

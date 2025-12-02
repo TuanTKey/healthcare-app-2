@@ -239,7 +239,18 @@ class PrescriptionService {
     const { page = 1, limit = 10, status } = options;
     const skip = (page - 1) * limit;
 
-    const query = { patientId };
+    // Tìm bệnh nhân để lấy đúng userId
+    let actualPatientId = patientId;
+    
+    // Kiểm tra xem patientId có phải là custom patientId (PT...) không
+    if (patientId && !patientId.match(/^[0-9a-fA-F]{24}$/)) {
+      const patient = await Patient.findOne({ patientId: patientId });
+      if (patient && patient.userId) {
+        actualPatientId = patient.userId;
+      }
+    }
+
+    const query = { patientId: actualPatientId };
     if (status) {
       query.status = status;
     }
@@ -249,7 +260,7 @@ class PrescriptionService {
       .populate('medications.medicationId')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(parseInt(limit));
 
     const total = await Prescription.countDocuments(query);
 
