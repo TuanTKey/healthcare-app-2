@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Text, ActivityIndicator } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { MaterialIcons } from '@expo/vector-icons';
 import Card from '../../components/common/Card';
@@ -10,10 +10,10 @@ const DashboardScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = React.useState(false);
   const [stats, setStats] = useState([
-    { icon: 'event', label: 'Lịch hẹn', value: '0', color: '#4CAF50' },
-    { icon: 'local-pharmacy', label: 'Đơn thuốc', value: '0', color: '#2196F3' },
-    { icon: 'receipt', label: 'Hóa đơn', value: '0', color: '#FF9800' },
-    { icon: 'folder', label: 'Hồ sơ', value: '0', color: '#9C27B0' },
+    { icon: 'event', label: 'Lịch hẹn', value: '0', color: '#4CAF50', screen: 'Appointments' },
+    { icon: 'local-pharmacy', label: 'Đơn thuốc', value: '0', color: '#2196F3', screen: 'Prescriptions' },
+    { icon: 'receipt', label: 'Hóa đơn', value: '0', color: '#FF9800', screen: 'Billing' },
+    { icon: 'folder', label: 'Hồ sơ', value: '0', color: '#9C27B0', screen: 'Records' },
   ]);
 
   const quickActions = [
@@ -125,10 +125,10 @@ const DashboardScreen = ({ navigation }) => {
 
       // Update stats
       setStats(prevStats => [
-        { ...prevStats[0], value: appointmentCount.toString() },
-        { ...prevStats[1], value: prescriptionCount.toString() },
-        { ...prevStats[2], value: billCount.toString() },
-        { ...prevStats[3], value: recordCount.toString() },
+        { ...prevStats[0], value: appointmentCount.toString(), screen: 'Appointments' },
+        { ...prevStats[1], value: prescriptionCount.toString(), screen: 'Prescriptions' },
+        { ...prevStats[2], value: billCount.toString(), screen: 'Billing' },
+        { ...prevStats[3], value: recordCount.toString(), screen: 'Records' },
       ]);
     } catch (error) {
       console.error('Lỗi lấy thống kê:', error);
@@ -167,19 +167,26 @@ const DashboardScreen = ({ navigation }) => {
         </Text>
         <View style={styles.statsGrid}>
           {stats.map((stat, index) => (
-            <Card key={index} style={styles.statCard}>
-              <Card.Content style={styles.statContent}>
-                <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
-                  <MaterialIcons name={stat.icon} size={24} color="white" />
-                </View>
-                <Text variant="headlineSmall" style={styles.statValue}>
-                  {stat.value}
-                </Text>
-                <Text variant="bodyMedium" style={styles.statLabel}>
-                  {stat.label}
-                </Text>
-              </Card.Content>
-            </Card>
+            <TouchableOpacity 
+              key={index} 
+              style={styles.statCardWrapper}
+              onPress={() => navigation.navigate(stat.screen)}
+              activeOpacity={0.7}
+            >
+              <Card style={styles.statCard}>
+                <Card.Content style={styles.statContent}>
+                  <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
+                    <MaterialIcons name={stat.icon} size={24} color="white" />
+                  </View>
+                  <Text variant="headlineSmall" style={styles.statValue}>
+                    {stat.value}
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.statLabel}>
+                    {stat.label}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
@@ -268,9 +275,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  statCard: {
+  statCardWrapper: {
     width: '48%',
     marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
   },
   statContent: {
     alignItems: 'center',
