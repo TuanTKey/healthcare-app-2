@@ -383,31 +383,36 @@ class BillingService {
         throw new AppError('Không thể thanh toán hóa đơn đã hủy', 400, 'BILL_VOIDED');
       }
 
-      // Kiểm tra số tiền thanh toán
-      const remainingAmount = bill.finalAmount - bill.paidAmount;
+      // Kiểm tra số tiền thanh toán - sử dụng đúng field names từ schema
+      const remainingAmount = bill.balanceDue || (bill.grandTotal - bill.amountPaid);
       if (paymentData.amount > remainingAmount) {
         throw new AppError('Số tiền thanh toán vượt quá số tiền còn nợ', 400, 'PAYMENT_AMOUNT_EXCEEDED');
       }
 
       // Tạo giao dịch thanh toán
       const payment = {
+        paymentId: `PAY${Date.now()}`,
         paymentDate: new Date(),
         amount: paymentData.amount,
-        paymentMethod: paymentData.paymentMethod,
-        referenceNumber: paymentData.referenceNumber,
+        method: paymentData.paymentMethod,
+        reference: paymentData.referenceNumber,
         notes: paymentData.notes,
-        processedBy
+        processedBy,
+        status: 'COMPLETED'
       };
 
       bill.payments.push(payment);
-      bill.paidAmount += paymentData.amount;
+      bill.amountPaid += paymentData.amount;
+      bill.balanceDue = bill.grandTotal - bill.amountPaid;
 
       // Cập nhật trạng thái hóa đơn
-      if (bill.paidAmount >= bill.finalAmount) {
+      if (bill.balanceDue <= 0) {
         bill.status = 'PAID';
-      } else if (bill.paidAmount > 0) {
+      } else if (bill.amountPaid > 0) {
         bill.status = 'PARTIAL';
       }
+
+      console.log(`✅ Payment processed: ${paymentData.amount}, New status: ${bill.status}, Balance: ${bill.balanceDue}`);
 
       return await bill.save();
     } catch (error) {

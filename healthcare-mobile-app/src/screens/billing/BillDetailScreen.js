@@ -29,7 +29,10 @@ const BillDetailScreen = ({ navigation, route }) => {
     try {
       setLoading(true);
       const response = await api.get(`/bills/${billId}`);
-      setBill(response.data?.data?.bill || response.data?.data);
+      console.log('📋 Bill Detail API Response:', JSON.stringify(response.data, null, 2));
+      const billData = response.data?.data?.bill || response.data?.data || response.data;
+      console.log('📋 Bill Data extracted:', JSON.stringify(billData, null, 2));
+      setBill(billData);
     } catch (error) {
       console.error('Error fetching bill:', error);
       Alert.alert('Lỗi', 'Không thể tải thông tin hóa đơn');
