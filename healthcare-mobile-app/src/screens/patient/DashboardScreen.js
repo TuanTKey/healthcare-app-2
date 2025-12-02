@@ -72,7 +72,7 @@ const DashboardScreen = ({ navigation }) => {
 
       // Fetch medical records
       try {
-        const recordsRes = await api.get(`/medicalRecord/patient/${user._id}/records`);
+        const recordsRes = await api.get(`/medical-records/patient/${user._id}/records`);
         console.log('📋 Medical records response:', recordsRes.data);
         
         if (recordsRes.data?.data?.medicalRecords && Array.isArray(recordsRes.data.data.medicalRecords)) {

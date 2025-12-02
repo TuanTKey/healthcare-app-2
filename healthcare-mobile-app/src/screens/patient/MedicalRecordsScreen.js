@@ -23,7 +23,7 @@ const MedicalRecordsScreen = ({ navigation }) => {
       if (!user?._id) return;
 
       console.log('📋 Fetching medical records for patient:', user._id);
-      const response = await api.get(`/medicalRecord/patient/${user._id}/records`);
+      const response = await api.get(`/medical-records/patient/${user._id}/records`);
       console.log('📋 Medical records response:', response.data);
       
       // Parse response - handle different formats

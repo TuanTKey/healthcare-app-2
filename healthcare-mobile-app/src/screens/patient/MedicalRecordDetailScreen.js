@@ -31,7 +31,7 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
       setLoading(true);
       console.log('📋 Fetching medical record detail:', recordId);
       
-      const response = await api.get(`/medicalRecord/${recordId}`);
+      const response = await api.get(`/medical-records/${recordId}`);
       console.log('📋 Medical record detail response:', response.data);
       
       let recordData = null;
@@ -73,7 +73,7 @@ const MedicalRecordDetailScreen = ({ route, navigation }) => {
               setDeleting(true);
               console.log('🗑️ Deleting medical record:', recordId);
               
-              const response = await api.delete(`/medicalRecord/${recordId}`);
+              const response = await api.delete(`/medical-records/${recordId}`);
               console.log('🗑️ Delete response:', response.data);
               
               Alert.alert('Thành công', 'Hồ sơ bệnh án đã được xóa');

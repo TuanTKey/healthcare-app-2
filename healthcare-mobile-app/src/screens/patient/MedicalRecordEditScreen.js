@@ -43,7 +43,7 @@ const MedicalRecordEditScreen = ({ route, navigation }) => {
       setLoading(true);
       console.log('📋 Fetching medical record for edit:', recordId);
       
-      const response = await api.get(`/medicalRecord/${recordId}`);
+      const response = await api.get(`/medical-records/${recordId}`);
       let recordData = response.data?.data || response.data;
       
       initializeForm(recordData);
@@ -134,7 +134,7 @@ const MedicalRecordEditScreen = ({ route, navigation }) => {
 
       console.log('📦 Final update data:', updateData);
 
-      const response = await api.put(`/medicalRecord/${recordId}`, updateData);
+      const response = await api.put(`/medical-records/${recordId}`, updateData);
       console.log('💾 Save response:', response.data);
       
       Alert.alert('Thành công', 'Hồ sơ bệnh án đã được cập nhật');
