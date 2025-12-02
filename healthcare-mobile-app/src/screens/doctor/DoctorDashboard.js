@@ -55,7 +55,7 @@ const DoctorDashboard = () => {
       // Lấy lịch hẹn của bác sĩ
       try {
         const appointmentsRes = await api.get('/appointments?limit=100');
-        console.log('📊 Doctor Appointments Response:', appointmentsRes.data);
+        console.log('📊 Doctor Appointments Response:', JSON.stringify(appointmentsRes.data));
         
         if (appointmentsRes.data?.data?.data) {
           appointments = appointmentsRes.data.data.data;
@@ -66,23 +66,32 @@ const DoctorDashboard = () => {
         const today = new Date().toDateString();
         
         appointments.forEach(apt => {
-          const aptDate = new Date(apt.scheduledTime || apt.date).toDateString();
+          // Sử dụng appointmentDate thay vì date
+          const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
           if (aptDate === today) {
             todayAppts++;
             if (apt.status === 'COMPLETED') {
               completedAppts++;
             }
           }
-          if (apt.status === 'PENDING' || apt.status === 'CONFIRMED') {
+          if (['PENDING', 'SCHEDULED', 'CONFIRMED'].includes(apt.status)) {
             pendingAppts++;
           }
         });
 
-        // Lấy lịch hôm nay
-        setTodaySchedule(appointments.filter(apt => {
-          const aptDate = new Date(apt.scheduledTime || apt.date).toDateString();
-          return aptDate === today;
-        }).slice(0, 5));
+        // Lấy lịch hôm nay - sắp xếp theo giờ
+        const todayAppointments = appointments
+          .filter(apt => {
+            const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
+            return aptDate === today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+          })
+          .sort((a, b) => 
+            new Date(a.scheduledTime || a.appointmentDate || a.date) - 
+            new Date(b.scheduledTime || b.appointmentDate || b.date)
+          )
+          .slice(0, 5);
+        
+        setTodaySchedule(todayAppointments);
 
       } catch (err) {
         console.warn('Could not fetch appointments:', err.message);
@@ -92,8 +101,20 @@ const DoctorDashboard = () => {
       let totalPatients = 0;
       try {
         const patientsRes = await api.get('/patients?limit=1');
-        if (patientsRes.data?.pagination?.total) {
+        console.log('📊 Patients Response:', JSON.stringify(patientsRes.data));
+        
+        // Thử các cấu trúc response khác nhau
+        if (patientsRes.data?.data?.pagination?.total) {
+          totalPatients = patientsRes.data.data.pagination.total;
+        } else if (patientsRes.data?.pagination?.total) {
           totalPatients = patientsRes.data.pagination.total;
+        } else if (patientsRes.data?.data?.total) {
+          totalPatients = patientsRes.data.data.total;
+        } else if (patientsRes.data?.total) {
+          totalPatients = patientsRes.data.total;
+        } else if (Array.isArray(patientsRes.data?.data?.patients)) {
+          // Nếu không có pagination, có thể endpoint trả về tất cả
+          totalPatients = patientsRes.data.data.patients.length;
         }
       } catch (err) {
         console.warn('Could not fetch patients count:', err.message);
