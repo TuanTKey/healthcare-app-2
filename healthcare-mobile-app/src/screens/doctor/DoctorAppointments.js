@@ -144,7 +144,7 @@ const DoctorAppointments = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={styles.appointmentCard}
-        onPress={() => navigation.navigate('DoctorAppointmentDetail', { appointmentId: item._id })}
+        onPress={() => navigation.navigate('DoctorAppointmentDetail', { appointment: item })}
       >
         <View style={styles.cardHeader}>
           <View style={styles.dateContainer}>
