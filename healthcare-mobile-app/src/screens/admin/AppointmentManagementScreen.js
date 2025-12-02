@@ -40,11 +40,25 @@ const AppointmentManagementScreen = ({ navigation }) => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
+      console.log('📋 [ADMIN] Fetching all appointments...');
+      
       const response = await api.get('/appointments', {
         params: { page: 1, limit: 100 }
       });
       
-      let allAppointments = response.data?.data?.appointments || response.data?.data || [];
+      console.log('📋 [ADMIN] Appointments response:', response.data);
+      
+      // Parse response - API trả về { data: appointments[], pagination: {} }
+      let allAppointments = [];
+      if (response.data?.data?.data && Array.isArray(response.data.data.data)) {
+        allAppointments = response.data.data.data;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        allAppointments = response.data.data;
+      } else if (response.data?.data?.appointments && Array.isArray(response.data.data.appointments)) {
+        allAppointments = response.data.data.appointments;
+      }
+      
+      console.log('📋 [ADMIN] Parsed appointments count:', allAppointments.length);
       
       // Calculate stats
       const today = new Date().toDateString();
@@ -55,7 +69,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
         completed: allAppointments.filter(a => a.status === 'COMPLETED').length,
         cancelled: allAppointments.filter(a => a.status === 'CANCELLED').length,
         today: allAppointments.filter(a => 
-          new Date(a.scheduledTime || a.date).toDateString() === today
+          new Date(a.appointmentDate || a.scheduledTime || a.date).toDateString() === today
         ).length
       });
 
@@ -63,7 +77,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
       if (filter !== 'all') {
         if (filter === 'today') {
           allAppointments = allAppointments.filter(a => 
-            new Date(a.scheduledTime || a.date).toDateString() === today
+            new Date(a.appointmentDate || a.scheduledTime || a.date).toDateString() === today
           );
         } else {
           allAppointments = allAppointments.filter(a => 
@@ -74,12 +88,12 @@ const AppointmentManagementScreen = ({ navigation }) => {
 
       // Sort by date (newest first)
       allAppointments.sort((a, b) => 
-        new Date(b.scheduledTime || b.date) - new Date(a.scheduledTime || a.date)
+        new Date(b.appointmentDate || b.scheduledTime || b.date) - new Date(a.appointmentDate || a.scheduledTime || a.date)
       );
 
       setAppointments(allAppointments);
     } catch (error) {
-      console.warn('Error fetching appointments:', error.message);
+      console.error('❌ [ADMIN] Error fetching appointments:', error.message, error.response?.data);
       Alert.alert('Lỗi', 'Không thể tải danh sách lịch hẹn');
     } finally {
       setLoading(false);
@@ -121,11 +135,13 @@ const AppointmentManagementScreen = ({ navigation }) => {
   const handleConfirmAppointment = async (appointmentId) => {
     try {
       setActionLoading(true);
+      console.log('📋 [ADMIN] Confirming appointment:', appointmentId);
       await api.put(`/appointments/${appointmentId}`, { status: 'CONFIRMED' });
       Alert.alert('Thành công', 'Đã xác nhận lịch hẹn');
       fetchAppointments();
       setShowDetailModal(false);
     } catch (error) {
+      console.error('❌ [ADMIN] Confirm error:', error.response?.data);
       Alert.alert('Lỗi', error.response?.data?.message || 'Không thể xác nhận lịch hẹn');
     } finally {
       setActionLoading(false);
@@ -135,11 +151,13 @@ const AppointmentManagementScreen = ({ navigation }) => {
   const handleCompleteAppointment = async (appointmentId) => {
     try {
       setActionLoading(true);
+      console.log('📋 [ADMIN] Completing appointment:', appointmentId);
       await api.put(`/appointments/${appointmentId}`, { status: 'COMPLETED' });
       Alert.alert('Thành công', 'Đã hoàn thành lịch hẹn');
       fetchAppointments();
       setShowDetailModal(false);
     } catch (error) {
+      console.error('❌ [ADMIN] Complete error:', error.response?.data);
       Alert.alert('Lỗi', error.response?.data?.message || 'Không thể cập nhật lịch hẹn');
     } finally {
       setActionLoading(false);
@@ -158,6 +176,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               setActionLoading(true);
+              console.log('📋 [ADMIN] Cancelling appointment:', appointmentId);
               await api.put(`/appointments/${appointmentId}`, { 
                 status: 'CANCELLED',
                 cancellationReason: 'Hủy bởi Admin'
@@ -166,6 +185,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
               fetchAppointments();
               setShowDetailModal(false);
             } catch (error) {
+              console.error('❌ [ADMIN] Cancel error:', error.response?.data);
               Alert.alert('Lỗi', 'Không thể hủy lịch hẹn');
             } finally {
               setActionLoading(false);
@@ -179,11 +199,13 @@ const AppointmentManagementScreen = ({ navigation }) => {
   const handleMarkNoShow = async (appointmentId) => {
     try {
       setActionLoading(true);
+      console.log('📋 [ADMIN] Marking no-show:', appointmentId);
       await api.put(`/appointments/${appointmentId}`, { status: 'NO_SHOW' });
       Alert.alert('Thành công', 'Đã đánh dấu không đến');
       fetchAppointments();
       setShowDetailModal(false);
     } catch (error) {
+      console.error('❌ [ADMIN] No-show error:', error.response?.data);
       Alert.alert('Lỗi', 'Không thể cập nhật lịch hẹn');
     } finally {
       setActionLoading(false);
@@ -210,15 +232,15 @@ const AppointmentManagementScreen = ({ navigation }) => {
   );
 
   const AppointmentItem = ({ item }) => {
-    const patientName = item.patient?.personalInfo 
-      ? `${item.patient.personalInfo.firstName} ${item.patient.personalInfo.lastName}`
-      : item.patient?.email || 'N/A';
+    const patientName = item.patientId?.personalInfo 
+      ? `${item.patientId.personalInfo.firstName} ${item.patientId.personalInfo.lastName}`
+      : item.patientId?.email || item.patient?.email || 'N/A';
     
-    const doctorName = item.doctor?.personalInfo
-      ? `${item.doctor.personalInfo.firstName} ${item.doctor.personalInfo.lastName}`
-      : item.doctor?.email || 'N/A';
+    const doctorName = item.doctorId?.personalInfo
+      ? `${item.doctorId.personalInfo.firstName} ${item.doctorId.personalInfo.lastName}`
+      : item.doctorId?.email || item.doctor?.email || 'N/A';
 
-    const appointmentDate = new Date(item.scheduledTime || item.date);
+    const appointmentDate = new Date(item.appointmentDate || item.scheduledTime || item.date);
     const isToday = appointmentDate.toDateString() === new Date().toDateString();
 
     return (
@@ -341,7 +363,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
         <FlatList
           data={appointments}
           renderItem={({ item }) => <AppointmentItem item={item} />}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item.appointmentId || item._id}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -381,13 +403,13 @@ const AppointmentManagementScreen = ({ navigation }) => {
                     <MaterialIcons name="person" size={16} color="#2196F3" /> Bệnh Nhân
                   </Text>
                   <Text style={styles.sectionValue}>
-                    {selectedAppointment.patient?.personalInfo
-                      ? `${selectedAppointment.patient.personalInfo.firstName} ${selectedAppointment.patient.personalInfo.lastName}`
-                      : selectedAppointment.patient?.email || 'N/A'}
+                    {selectedAppointment.patientId?.personalInfo
+                      ? `${selectedAppointment.patientId.personalInfo.firstName} ${selectedAppointment.patientId.personalInfo.lastName}`
+                      : selectedAppointment.patientId?.email || selectedAppointment.patient?.email || 'N/A'}
                   </Text>
-                  {selectedAppointment.patient?.personalInfo?.phone && (
+                  {(selectedAppointment.patientId?.personalInfo?.phone || selectedAppointment.patientId?.phone) && (
                     <Text style={styles.sectionSubValue}>
-                      📞 {selectedAppointment.patient.personalInfo.phone}
+                      📞 {selectedAppointment.patientId?.personalInfo?.phone || selectedAppointment.patientId?.phone}
                     </Text>
                   )}
                 </View>
@@ -398,9 +420,9 @@ const AppointmentManagementScreen = ({ navigation }) => {
                     <MaterialIcons name="medical-services" size={16} color="#4CAF50" /> Bác Sĩ
                   </Text>
                   <Text style={styles.sectionValue}>
-                    {selectedAppointment.doctor?.personalInfo
-                      ? `${selectedAppointment.doctor.personalInfo.firstName} ${selectedAppointment.doctor.personalInfo.lastName}`
-                      : selectedAppointment.doctor?.email || 'N/A'}
+                    {selectedAppointment.doctorId?.personalInfo
+                      ? `${selectedAppointment.doctorId.personalInfo.firstName} ${selectedAppointment.doctorId.personalInfo.lastName}`
+                      : selectedAppointment.doctorId?.email || selectedAppointment.doctor?.email || 'N/A'}
                   </Text>
                 </View>
 
@@ -410,7 +432,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                     <MaterialIcons name="schedule" size={16} color="#FF9800" /> Thời Gian
                   </Text>
                   <Text style={styles.sectionValue}>
-                    {new Date(selectedAppointment.scheduledTime || selectedAppointment.date).toLocaleString('vi-VN')}
+                    {new Date(selectedAppointment.appointmentDate || selectedAppointment.scheduledTime || selectedAppointment.date).toLocaleString('vi-VN')}
                   </Text>
                 </View>
 
@@ -440,7 +462,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                     <>
                       <Button
                         mode="contained"
-                        onPress={() => handleConfirmAppointment(selectedAppointment._id)}
+                        onPress={() => handleConfirmAppointment(selectedAppointment.appointmentId || selectedAppointment._id)}
                         style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
                         loading={actionLoading}
                       >
@@ -448,7 +470,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                       </Button>
                       <Button
                         mode="outlined"
-                        onPress={() => handleCancelAppointment(selectedAppointment._id)}
+                        onPress={() => handleCancelAppointment(selectedAppointment.appointmentId || selectedAppointment._id)}
                         style={styles.cancelButton}
                         loading={actionLoading}
                       >
@@ -460,7 +482,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                     <>
                       <Button
                         mode="contained"
-                        onPress={() => handleCompleteAppointment(selectedAppointment._id)}
+                        onPress={() => handleCompleteAppointment(selectedAppointment.appointmentId || selectedAppointment._id)}
                         style={[styles.actionButton, { backgroundColor: '#2196F3' }]}
                         loading={actionLoading}
                       >
@@ -468,7 +490,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                       </Button>
                       <Button
                         mode="outlined"
-                        onPress={() => handleMarkNoShow(selectedAppointment._id)}
+                        onPress={() => handleMarkNoShow(selectedAppointment.appointmentId || selectedAppointment._id)}
                         style={styles.noShowButton}
                         loading={actionLoading}
                       >
@@ -476,7 +498,7 @@ const AppointmentManagementScreen = ({ navigation }) => {
                       </Button>
                       <Button
                         mode="outlined"
-                        onPress={() => handleCancelAppointment(selectedAppointment._id)}
+                        onPress={() => handleCancelAppointment(selectedAppointment.appointmentId || selectedAppointment._id)}
                         style={styles.cancelButton}
                         loading={actionLoading}
                       >
