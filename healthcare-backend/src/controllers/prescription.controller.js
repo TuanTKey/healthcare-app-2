@@ -5,10 +5,10 @@ class PrescriptionController {
   
   // Lấy tất cả đơn thuốc (cho admin)
   getAllPrescriptions = asyncHandler(async (req, res) => {
-    const { page, limit, status, patientId, doctorId } = req.query;
+    const { page, limit, status, patientId, doctorId, prescriptionId } = req.query;
 
     const result = await prescriptionService.getAllPrescriptions({
-      page, limit, status, patientId, doctorId
+      page, limit, status, patientId, doctorId, prescriptionId
     });
 
     res.json({

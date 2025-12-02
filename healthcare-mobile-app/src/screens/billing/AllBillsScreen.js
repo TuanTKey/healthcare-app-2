@@ -30,11 +30,26 @@ const AllBillsScreen = ({ navigation, route }) => {
     try {
       setLoading(true);
       const response = await api.get('/bills');
-      const billsData = response.data?.data?.bills || response.data?.data || [];
+      console.log('📋 AllBills response:', JSON.stringify(response.data, null, 2));
+      
+      // Handle nested response: { data: { data: { data: [...], pagination: {...} } } }
+      let billsData = [];
+      if (Array.isArray(response.data?.data?.data)) {
+        billsData = response.data.data.data;
+      } else if (Array.isArray(response.data?.data?.bills)) {
+        billsData = response.data.data.bills;
+      } else if (Array.isArray(response.data?.data)) {
+        billsData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        billsData = response.data;
+      }
+      
+      console.log('📋 Bills extracted:', billsData.length, 'items');
       setBills(billsData);
     } catch (error) {
       console.error('Error fetching bills:', error);
       Alert.alert('Lỗi', 'Không thể tải danh sách hóa đơn');
+      setBills([]);
     } finally {
       setLoading(false);
     }

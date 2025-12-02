@@ -125,15 +125,22 @@ const AdminDashboard = () => {
         const billsRes = await api.get('/bills');
         console.log('📊 Bills API Response:', JSON.stringify(billsRes.data, null, 2));
         
-        if (billsRes.data?.data?.docs) {
+        // Handle nested structure: { data: { data: { data: [...], pagination: {...} } } }
+        if (Array.isArray(billsRes.data?.data?.data)) {
+          bills = billsRes.data.data.data;
+        } else if (billsRes.data?.data?.docs) {
           bills = billsRes.data.data.docs;
         } else if (Array.isArray(billsRes.data?.data)) {
           bills = billsRes.data.data;
         } else if (Array.isArray(billsRes.data)) {
           bills = billsRes.data;
+        } else {
+          bills = [];
         }
+        console.log('📊 Bills extracted:', bills.length, 'items');
       } catch (err) {
         console.warn('Could not fetch bills:', err.message);
+        bills = [];
       }
 
       const today = new Date().toDateString();

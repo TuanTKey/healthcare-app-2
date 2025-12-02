@@ -18,6 +18,12 @@ const billSchema = new mongoose.Schema({
     required: true
   },
   
+  // Liên kết với đơn thuốc (nếu có)
+  prescriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Prescription'
+  },
+  
   // Thông tin hóa đơn
   issueDate: {
     type: Date,

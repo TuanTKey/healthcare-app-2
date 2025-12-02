@@ -37,7 +37,7 @@ const BillingDashboard = ({ navigation }) => {
       
       // Fetch all bills
       const billsRes = await api.get('/bills');
-      const bills = billsRes.data?.data?.bills || billsRes.data?.data || [];
+      const bills = billsRes.data?.data?.data || billsRes.data?.data?.bills || billsRes.data?.data || [];
       
       // Calculate stats
       const pending = bills.filter(b => b.status === 'PENDING' || b.status === 'PARTIALLY_PAID');

@@ -146,6 +146,17 @@ const prescriptionSchema = new mongoose.Schema({
   notes: String,
   specialInstructions: String,
   
+  // Liên kết hoá đơn
+  billId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Bill'
+  },
+  billCreated: {
+    type: Boolean,
+    default: false
+  },
+  billCreatedAt: Date,
+  
   // Metadata
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

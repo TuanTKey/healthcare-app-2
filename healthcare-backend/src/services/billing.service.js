@@ -1,9 +1,150 @@
 // src/services/billing.service.js
 const Bill = require('../models/bill.model');
 const Patient = require('../models/patient.model');
+const Prescription = require('../models/prescription.model');
+const Medication = require('../models/medication.model');
+const User = require('../models/user.model');
 const { AppError } = require('../middlewares/error.middleware');
 
 class BillingService {
+  /**
+   * 🎯 TẠO HÓA ĐƠN TỪ ĐƠN THUỐC
+   */
+  async createBillFromPrescription(prescriptionId, createdBy, additionalData = {}) {
+    try {
+      // Lấy thông tin đơn thuốc
+      const prescription = await Prescription.findById(prescriptionId)
+        .populate('patientId', 'personalInfo email')
+        .populate('doctorId', 'personalInfo')
+        .populate('medications.medicationId');
+
+      if (!prescription) {
+        throw new AppError('Không tìm thấy đơn thuốc', 404, 'PRESCRIPTION_NOT_FOUND');
+      }
+
+      // Kiểm tra đơn thuốc đã có hoá đơn chưa
+      const existingBill = await Bill.findOne({ 
+        prescriptionId: prescriptionId,
+        status: { $ne: 'VOIDED' }
+      });
+      
+      if (existingBill) {
+        throw new AppError('Đơn thuốc này đã có hoá đơn', 400, 'BILL_ALREADY_EXISTS');
+      }
+
+      // Lấy thông tin bệnh nhân
+      const patient = await Patient.findOne({ userId: prescription.patientId._id });
+      
+      // Tạo mã hóa đơn tự động
+      const billCount = await Bill.countDocuments();
+      const billId = `BILL${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+      const billNumber = `HD${String(billCount + 1).padStart(6, '0')}`;
+
+      // Tạo danh sách items từ medications trong đơn thuốc
+      const services = [];
+      let subtotal = 0;
+
+      for (const med of prescription.medications) {
+        // Lấy giá từ medication hoặc sử dụng giá mặc định
+        let unitPrice = 0;
+        
+        if (med.medicationId && med.medicationId.pricing) {
+          unitPrice = med.medicationId.pricing.sellingPrice || 0;
+        } else {
+          // Tìm medication theo tên nếu không có medicationId
+          const medication = await Medication.findOne({ 
+            name: { $regex: new RegExp(med.name, 'i') } 
+          });
+          if (medication && medication.pricing) {
+            unitPrice = medication.pricing.sellingPrice || 0;
+          }
+        }
+
+        // Nếu không có giá, đặt giá mặc định
+        if (!unitPrice) {
+          unitPrice = additionalData.defaultPrice || 10000; // 10,000 VND mặc định
+        }
+
+        const quantity = med.totalQuantity || 1;
+        const total = quantity * unitPrice;
+        subtotal += total;
+
+        services.push({
+          serviceCode: med.medicationId?.medicationId || `MED-${Date.now()}`,
+          serviceName: med.name,
+          description: `${med.dosage?.value || ''} ${med.dosage?.unit || ''} - ${med.frequency?.instructions || med.instructions || ''}`.trim(),
+          quantity: quantity,
+          unitPrice: unitPrice,
+          discount: 0,
+          taxRate: 0,
+          total: total
+        });
+      }
+
+      // Thêm phí khám nếu có
+      if (additionalData.consultationFee) {
+        subtotal += additionalData.consultationFee;
+        services.unshift({
+          serviceCode: 'CONSULT-001',
+          serviceName: 'Phí khám bệnh',
+          description: 'Phí khám và tư vấn bác sĩ',
+          quantity: 1,
+          unitPrice: additionalData.consultationFee,
+          discount: 0,
+          taxRate: 0,
+          total: additionalData.consultationFee
+        });
+      }
+
+      // Tính toán tổng
+      const totalDiscount = additionalData.discount || 0;
+      const totalTax = 0; // Thuế VAT nếu có
+      const grandTotal = subtotal - totalDiscount + totalTax;
+
+      // Thông tin bệnh nhân
+      const patientInfo = prescription.patientId.personalInfo || {};
+      
+      // Tạo bill
+      const bill = new Bill({
+        billId,
+        billNumber,
+        patientId: prescription.patientId._id,
+        prescriptionId: prescription._id, // Link to prescription
+        issueDate: new Date(),
+        dueDate: additionalData.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        billType: 'PHARMACY',
+        services,
+        subtotal,
+        totalDiscount,
+        totalTax,
+        grandTotal,
+        amountPaid: 0,
+        balanceDue: grandTotal,
+        status: 'ISSUED',
+        notes: additionalData.notes || `Hoá đơn thuốc từ đơn thuốc ${prescription.prescriptionId}`,
+        createdBy
+      });
+
+      // Tính toán lại để đảm bảo chính xác
+      bill.calculateTotals();
+      
+      const savedBill = await bill.save();
+
+      // Cập nhật đơn thuốc - đánh dấu đã tạo hoá đơn
+      prescription.billId = savedBill._id;
+      prescription.billCreated = true;
+      prescription.billCreatedAt = new Date();
+      await prescription.save();
+
+      console.log(`✅ Bill created from prescription: ${savedBill.billNumber} for prescription ${prescription.prescriptionId}`);
+
+      return savedBill;
+    } catch (error) {
+      console.error('❌ [BILLING SERVICE] Create bill from prescription error:', error);
+      throw error;
+    }
+  }
+
   /**
    * 🎯 LẤY TẤT CẢ HÓA ĐƠN (CHO ADMIN)
    */

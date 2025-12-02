@@ -48,7 +48,10 @@ async function authenticate(req, res, next) {
     }
 
     // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-    if (user.status !== 'ACTIVE') {
+    const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+    const isValidStatus = user.status === 'ACTIVE' || (user.status === 'PENDING_VERIFICATION' && allowSelfActivate);
+    
+    if (!isValidStatus) {
       const errorMessage = getAccountStatusMessage(user.status);
       throw new AppError(errorMessage, 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
     }

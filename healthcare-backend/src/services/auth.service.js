@@ -39,8 +39,10 @@ class AuthService {
 
       // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
       const userStatus = user.status || 'ACTIVE';
+      const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+      const isValidStatus = userStatus === 'ACTIVE' || (userStatus === 'PENDING_VERIFICATION' && allowSelfActivate);
       
-      if (userStatus !== 'ACTIVE') {
+      if (!isValidStatus) {
         await this.logFailedLoginAttempt(user.email, ipAddress, 'ACCOUNT_INACTIVE');
         throw new AppError(this.getAccountStatusMessage(userStatus), 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
       }
@@ -207,7 +209,12 @@ class AuthService {
       const payload = verifyRefreshToken(refreshToken);
       
       const user = await User.findById(payload.sub);
-      if (!user || (user.status && user.status !== 'ACTIVE')) {
+      
+      // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN VỚI ALLOW_SELF_ACTIVATE
+      const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+      const isValidStatus = !user.status || user.status === 'ACTIVE' || (user.status === 'PENDING_VERIFICATION' && allowSelfActivate);
+      
+      if (!user || !isValidStatus) {
         throw new AppError('Token không hợp lệ', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
       }
 
@@ -351,8 +358,11 @@ class AuthService {
         };
       }
 
-      // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-      if (user.status !== 'ACTIVE') {
+      // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN VỚI ALLOW_SELF_ACTIVATE
+      const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+      const isValidStatus = user.status === 'ACTIVE' || (user.status === 'PENDING_VERIFICATION' && allowSelfActivate);
+      
+      if (!isValidStatus) {
         throw new AppError(this.getAccountStatusMessage(user.status), 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
       }
 

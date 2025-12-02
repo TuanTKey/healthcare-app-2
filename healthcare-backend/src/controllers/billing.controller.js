@@ -5,6 +5,49 @@ const { AppError } = require('../middlewares/error.middleware');
 const { manualAuditLog, AUDIT_ACTIONS } = require('../middlewares/audit.middleware');
 
 /**
+ * 🎯 TẠO HÓA ĐƠN TỪ ĐƠN THUỐC
+ */
+const createBillFromPrescription = async (req, res, next) => {
+  try {
+    const { prescriptionId } = req.params;
+    const additionalData = req.body;
+
+    console.log('💰 [BILLING] Creating bill from prescription:', prescriptionId);
+
+    // Create bill using service
+    const bill = await billingService.createBillFromPrescription(
+      prescriptionId, 
+      req.user._id,
+      additionalData
+    );
+
+    // Audit log
+    await manualAuditLog({
+      action: AUDIT_ACTIONS.BILL_CREATE,
+      user: req.user,
+      metadata: {
+        billId: bill._id,
+        billNumber: bill.billNumber,
+        prescriptionId: prescriptionId,
+        amount: bill.grandTotal,
+        source: 'PRESCRIPTION'
+      }
+    });
+
+    console.log(`✅ Bill created from prescription: ${bill.billNumber}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo hóa đơn từ đơn thuốc thành công',
+      data: bill
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 🎯 LẤY TẤT CẢ HÓA ĐƠN (CHO ADMIN)
  */
 const getAllBills = async (req, res, next) => {
@@ -348,6 +391,7 @@ const getRevenueStats = async (req, res, next) => {
 };
 
 module.exports = {
+  createBillFromPrescription,
   getAllBills,
   createBill,
   getBill,

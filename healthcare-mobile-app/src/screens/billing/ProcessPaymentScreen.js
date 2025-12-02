@@ -27,17 +27,29 @@ const ProcessPaymentScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await api.get('/bills');
-      const allBills = response.data?.data?.bills || response.data?.data || [];
+      
+      // Handle nested response: { data: { data: { data: [...], pagination: {...} } } }
+      let allBills = [];
+      if (Array.isArray(response.data?.data?.data)) {
+        allBills = response.data.data.data;
+      } else if (Array.isArray(response.data?.data?.bills)) {
+        allBills = response.data.data.bills;
+      } else if (Array.isArray(response.data?.data)) {
+        allBills = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        allBills = response.data;
+      }
       
       // Filter only pending and partially paid bills
       const pendingBills = allBills.filter(
-        b => b.status === 'PENDING' || b.status === 'PARTIALLY_PAID'
+        b => b.status === 'PENDING' || b.status === 'PARTIALLY_PAID' || b.status === 'ISSUED'
       );
       
       setBills(pendingBills);
     } catch (error) {
       console.error('Error fetching bills:', error);
       Alert.alert('Lỗi', 'Không thể tải danh sách hóa đơn');
+      setBills([]);
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  createBillFromPrescription,
   createBill,
   getAllBills,
   getBill,
@@ -34,6 +35,12 @@ router.get('/revenue/stats',
   requirePermission('BILL.VIEW_REPORTS'),
   validateQuery(billingSchemas.billQuery),
   getRevenueStats
+);
+
+// 🎯 TẠO HÓA ĐƠN TỪ ĐƠN THUỐC
+router.post('/from-prescription/:prescriptionId',
+  requirePermission('BILL.CREATE'),
+  createBillFromPrescription
 );
 
 // 🎯 GET BILL DETAIL

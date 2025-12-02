@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, Alert, Text, ActivityIndicator, TouchableOpacity, Modal, TextInput as RNTextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -14,6 +14,13 @@ const PrescriptionDetailScreen = ({ route, navigation }) => {
   const [prescription, setPrescription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creatingBill, setCreatingBill] = useState(false);
+  const [showBillModal, setShowBillModal] = useState(false);
+  const [billOptions, setBillOptions] = useState({
+    consultationFee: '',
+    discount: '',
+    notes: ''
+  });
 
   useEffect(() => {
     loadPrescription();
@@ -54,6 +61,81 @@ const PrescriptionDetailScreen = ({ route, navigation }) => {
     setRefreshing(true);
     await loadPrescription();
     setRefreshing(false);
+  };
+
+  // 🎯 TẠO HOÁ ĐƠN TỪ ĐƠN THUỐC
+  const handleCreateBill = async () => {
+    try {
+      setCreatingBill(true);
+      
+      const payload = {
+        consultationFee: billOptions.consultationFee ? parseFloat(billOptions.consultationFee) : 0,
+        discount: billOptions.discount ? parseFloat(billOptions.discount) : 0,
+        notes: billOptions.notes || `Hoá đơn từ đơn thuốc ${prescription.prescriptionId}`,
+        defaultPrice: 10000 // Giá mặc định nếu thuốc không có giá
+      };
+
+      console.log('💰 Creating bill from prescription:', prescription._id);
+      const response = await api.post(`/bills/from-prescription/${prescription._id}`, payload);
+      
+      console.log('💰 Bill created:', response.data);
+      
+      setShowBillModal(false);
+      setBillOptions({ consultationFee: '', discount: '', notes: '' });
+      
+      Alert.alert(
+        'Thành công',
+        `Đã tạo hoá đơn ${response.data?.data?.billNumber || ''} thành công!`,
+        [
+          {
+            text: 'Xem hoá đơn',
+            onPress: () => {
+              // Navigate to bill detail
+              if (response.data?.data?._id) {
+                navigation.navigate('BillDetail', { billId: response.data.data._id });
+              }
+            }
+          },
+          { text: 'OK', onPress: () => loadPrescription() }
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Create bill error:', error.response?.data || error.message);
+      
+      let errorMessage = 'Không thể tạo hoá đơn';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      Alert.alert('Lỗi', errorMessage);
+    } finally {
+      setCreatingBill(false);
+    }
+  };
+
+  // Tính tổng tiền dự kiến
+  const calculateEstimatedTotal = () => {
+    let total = 0;
+    
+    if (prescription?.medications) {
+      prescription.medications.forEach(med => {
+        const price = med.medicationId?.pricing?.sellingPrice || 10000;
+        const quantity = med.totalQuantity || 1;
+        total += price * quantity;
+      });
+    }
+    
+    if (billOptions.consultationFee) {
+      total += parseFloat(billOptions.consultationFee) || 0;
+    }
+    
+    if (billOptions.discount) {
+      total -= parseFloat(billOptions.discount) || 0;
+    }
+    
+    return Math.max(0, total);
   };
 
   const getStatusColor = (status) => {
@@ -271,6 +353,162 @@ const PrescriptionDetailScreen = ({ route, navigation }) => {
         </Button>
       </View>
 
+      {/* Create Bill Button */}
+      {!prescription.billCreated && (
+        <TouchableOpacity 
+          style={styles.createBillButton}
+          onPress={() => setShowBillModal(true)}
+        >
+          <MaterialIcons name="receipt" size={24} color="#fff" />
+          <Text style={styles.createBillText}>Tạo Hoá Đơn Từ Đơn Thuốc</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Bill Already Created */}
+      {prescription.billCreated && (
+        <View style={styles.billCreatedBanner}>
+          <MaterialIcons name="check-circle" size={24} color="#4CAF50" />
+          <View style={styles.billCreatedInfo}>
+            <Text style={styles.billCreatedTitle}>Đã tạo hoá đơn</Text>
+            <Text style={styles.billCreatedDate}>
+              {prescription.billCreatedAt 
+                ? format(new Date(prescription.billCreatedAt), 'dd/MM/yyyy HH:mm', { locale: vi })
+                : ''}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.viewBillBtn}
+            onPress={() => {
+              if (prescription.billId) {
+                navigation.navigate('BillDetail', { billId: prescription.billId });
+              }
+            }}
+          >
+            <Text style={styles.viewBillText}>Xem</Text>
+            <MaterialIcons name="chevron-right" size={18} color="#1976d2" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Create Bill Modal */}
+      <Modal
+        visible={showBillModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBillModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Tạo Hoá Đơn</Text>
+              <TouchableOpacity onPress={() => setShowBillModal(false)}>
+                <MaterialIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Prescription Info */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Thông tin đơn thuốc</Text>
+                <Text style={styles.modalInfoText}>Mã đơn: {prescription.prescriptionId}</Text>
+                <Text style={styles.modalInfoText}>
+                  Bệnh nhân: {prescription.patientId?.personalInfo?.firstName || 'N/A'}
+                </Text>
+                <Text style={styles.modalInfoText}>
+                  Số loại thuốc: {prescription.medications?.length || 0}
+                </Text>
+              </View>
+
+              {/* Medications List */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Chi tiết thuốc</Text>
+                {prescription.medications?.map((med, index) => (
+                  <View key={index} style={styles.medItem}>
+                    <Text style={styles.medItemName}>{med.name}</Text>
+                    <View style={styles.medItemRow}>
+                      <Text style={styles.medItemQty}>SL: {med.totalQuantity || 1}</Text>
+                      <Text style={styles.medItemPrice}>
+                        {(med.medicationId?.pricing?.sellingPrice || 10000).toLocaleString('vi-VN')}đ
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Additional Options */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Tuỳ chọn thêm</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Phí khám bệnh (VNĐ)</Text>
+                  <RNTextInput
+                    style={styles.input}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={billOptions.consultationFee}
+                    onChangeText={(text) => setBillOptions({...billOptions, consultationFee: text})}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Giảm giá (VNĐ)</Text>
+                  <RNTextInput
+                    style={styles.input}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    value={billOptions.discount}
+                    onChangeText={(text) => setBillOptions({...billOptions, discount: text})}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Ghi chú</Text>
+                  <RNTextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Ghi chú cho hoá đơn..."
+                    multiline
+                    numberOfLines={3}
+                    value={billOptions.notes}
+                    onChangeText={(text) => setBillOptions({...billOptions, notes: text})}
+                  />
+                </View>
+              </View>
+
+              {/* Estimated Total */}
+              <View style={styles.totalSection}>
+                <Text style={styles.totalLabel}>Tổng dự kiến:</Text>
+                <Text style={styles.totalAmount}>
+                  {calculateEstimatedTotal().toLocaleString('vi-VN')} VNĐ
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelBtn}
+                onPress={() => setShowBillModal(false)}
+              >
+                <Text style={styles.cancelBtnText}>Huỷ</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmBtn, creatingBill && styles.disabledBtn]}
+                onPress={handleCreateBill}
+                disabled={creatingBill}
+              >
+                {creatingBill ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <MaterialIcons name="receipt" size={20} color="#fff" />
+                    <Text style={styles.confirmBtnText}>Tạo Hoá Đơn</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.spacer} />
     </ScrollView>
   );
@@ -407,6 +645,201 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 20,
+  },
+  // Create Bill Button
+  createBillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  createBillText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Bill Created Banner
+  billCreatedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  billCreatedInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  billCreatedTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2E7D32',
+  },
+  billCreatedDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  viewBillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewBillText: {
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
+    marginBottom: 10,
+  },
+  modalInfoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  medItem: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  medItemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 4,
+  },
+  medItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  medItemQty: {
+    fontSize: 13,
+    color: '#666',
+  },
+  medItemPrice: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: '#fafafa',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  totalSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 10,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1976d2',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+  },
+  confirmBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 8,
+  },
+  confirmBtnText: {
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  disabledBtn: {
+    opacity: 0.7,
   },
 });
 

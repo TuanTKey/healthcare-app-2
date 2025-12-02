@@ -30,7 +30,8 @@ class PrescriptionService {
         limit = 10,
         status,
         patientId,
-        doctorId
+        doctorId,
+        prescriptionId
       } = filters;
 
       const skip = (page - 1) * limit;
@@ -39,6 +40,11 @@ class PrescriptionService {
       if (status) query.status = status;
       if (patientId) query.patientId = patientId;
       if (doctorId) query.doctorId = doctorId;
+      
+      // Tìm kiếm theo mã đơn thuốc
+      if (prescriptionId) {
+        query.prescriptionId = { $regex: prescriptionId, $options: 'i' };
+      }
 
       const [prescriptions, total] = await Promise.all([
         Prescription.find(query)

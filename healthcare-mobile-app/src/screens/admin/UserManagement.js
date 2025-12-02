@@ -49,6 +49,19 @@ const UserManagement = ({ navigation }) => {
   // Roles that require professional info
   const PROFESSIONAL_ROLES = ['DOCTOR', 'NURSE', 'PHARMACIST', 'LAB_TECHNICIAN'];
 
+  // All available roles
+  const ALL_ROLES = [
+    { value: 'PATIENT', label: 'Bệnh nhân', icon: 'person', color: '#4caf50' },
+    { value: 'DOCTOR', label: 'Bác sĩ', icon: 'medical-services', color: '#2196f3' },
+    { value: 'NURSE', label: 'Y tá', icon: 'healing', color: '#9c27b0' },
+    { value: 'RECEPTIONIST', label: 'Lễ tân', icon: 'support-agent', color: '#ff9800' },
+    { value: 'PHARMACIST', label: 'Dược sĩ', icon: 'medication', color: '#00bcd4' },
+    { value: 'LAB_TECHNICIAN', label: 'KTV Xét nghiệm', icon: 'biotech', color: '#795548' },
+    { value: 'BILLING_STAFF', label: 'NV Kế toán', icon: 'receipt', color: '#607d8b' },
+    { value: 'DEPARTMENT_HEAD', label: 'Trưởng khoa', icon: 'admin-panel-settings', color: '#e91e63' },
+    { value: 'HOSPITAL_ADMIN', label: 'Quản trị BV', icon: 'business', color: '#673ab7' },
+  ];
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -391,25 +404,29 @@ const UserManagement = ({ navigation }) => {
 
               <View style={styles.roleContainer}>
                 <Text style={styles.roleLabel}>Role:</Text>
-                {['PATIENT', 'DOCTOR', 'NURSE', 'RECEPTIONIST'].map((role) => (
-                  <TouchableOpacity
-                    key={role}
-                    style={[
-                      styles.roleButton,
-                      formData.role === role && styles.roleButtonActive
-                    ]}
-                    onPress={() => setFormData({ ...formData, role })}
-                  >
-                    <Text
+                <View style={styles.roleGrid}>
+                  {ALL_ROLES.map((role) => (
+                    <TouchableOpacity
+                      key={role.value}
                       style={[
-                        styles.roleButtonText,
-                        formData.role === role && styles.roleButtonTextActive
+                        styles.roleButton,
+                        formData.role === role.value && styles.roleButtonActive,
+                        formData.role === role.value && { borderColor: role.color }
                       ]}
+                      onPress={() => setFormData({ ...formData, role: role.value })}
                     >
-                      {role}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <MaterialIcons name={role.icon} size={20} color={formData.role === role.value ? role.color : '#666'} />
+                      <Text
+                        style={[
+                          styles.roleButtonText,
+                          formData.role === role.value && { color: role.color, fontWeight: 'bold' }
+                        ]}
+                      >
+                        {role.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               {/* Professional Info for DOCTOR/NURSE */}
@@ -592,6 +609,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 16
   },
+  roleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
   genderContainer: {
     marginTop: 12,
     marginBottom: 16
@@ -603,25 +625,25 @@ const styles = StyleSheet.create({
     color: '#333'
   },
   roleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9'
+    backgroundColor: '#f9f9f9',
+    minWidth: '48%',
+    gap: 8
   },
   roleButtonActive: {
-    borderColor: '#007AFF',
     backgroundColor: '#E3F2FD'
   },
   roleButtonText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center'
+    fontSize: 13,
+    color: '#666'
   },
   roleButtonTextActive: {
-    color: '#007AFF',
     fontWeight: 'bold'
   },
   professionalInfoContainer: {

@@ -24,19 +24,33 @@ const PaymentHistoryScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await api.get('/bills');
-      const allBills = response.data?.data?.bills || response.data?.data || [];
+      console.log('💳 PaymentHistory response:', JSON.stringify(response.data, null, 2));
+      
+      // Handle nested response: { data: { data: { data: [...], pagination: {...} } } }
+      let allBills = [];
+      if (Array.isArray(response.data?.data?.data)) {
+        allBills = response.data.data.data;
+      } else if (Array.isArray(response.data?.data?.bills)) {
+        allBills = response.data.data.bills;
+      } else if (Array.isArray(response.data?.data)) {
+        allBills = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        allBills = response.data;
+      }
+      
+      console.log('💳 Bills extracted for payments:', allBills.length, 'items');
       
       // Extract all payments from bills
       const allPayments = [];
       allBills.forEach(bill => {
-        if (bill.payments && bill.payments.length > 0) {
+        if (bill.payments && Array.isArray(bill.payments) && bill.payments.length > 0) {
           bill.payments.forEach(payment => {
             allPayments.push({
               ...payment,
               bill: {
                 _id: bill._id,
                 billNumber: bill.billNumber,
-                patient: bill.patient,
+                patient: bill.patient || bill.patientId,
               },
             });
           });
@@ -45,12 +59,14 @@ const PaymentHistoryScreen = ({ navigation }) => {
 
       // Sort by date (newest first)
       allPayments.sort((a, b) => 
-        new Date(b.paidAt || b.createdAt) - new Date(a.paidAt || a.createdAt)
+        new Date(b.paidAt || b.paymentDate || b.createdAt) - new Date(a.paidAt || a.paymentDate || a.createdAt)
       );
 
+      console.log('💳 Total payments found:', allPayments.length);
       setPayments(allPayments);
     } catch (error) {
       console.error('Error fetching payment history:', error);
+      setPayments([]);
     } finally {
       setLoading(false);
     }

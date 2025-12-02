@@ -33,7 +33,18 @@ const RevenueReportScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await api.get('/bills');
-      const allBills = response.data?.data?.bills || response.data?.data || [];
+      
+      // Handle nested response: { data: { data: { data: [...], pagination: {...} } } }
+      let allBills = [];
+      if (Array.isArray(response.data?.data?.data)) {
+        allBills = response.data.data.data;
+      } else if (Array.isArray(response.data?.data?.bills)) {
+        allBills = response.data.data.bills;
+      } else if (Array.isArray(response.data?.data)) {
+        allBills = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        allBills = response.data;
+      }
 
       // Calculate date range based on period
       const now = new Date();
