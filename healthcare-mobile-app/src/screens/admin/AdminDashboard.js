@@ -194,7 +194,7 @@ const AdminDashboard = () => {
       });
 
       setStats({
-        totalUsers: totalAllUsers, // Hiển thị tổng TẤT CẢ users (kể cả đã xóa)
+        totalUsers: totalUsers, // Hiển thị users CHƯA XÓA (không kể users đã bị xóa)
         totalAppointments: totalAppointmentsCount,
         totalPatients: patients,
         totalDoctors: doctors,
