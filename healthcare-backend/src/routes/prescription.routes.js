@@ -25,7 +25,7 @@ router.use(authenticate);
 // 🎯 LẤY TẤT CẢ ĐƠN THUỐC (CHO ADMIN VÀ NHÂN VIÊN Y TẾ)
 router.get(
   '/',
-  requireRole([ROLES.SUPER_ADMIN, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.DOCTOR, ROLES.PHARMACIST, ROLES.NURSE]),
+  requireRole([ROLES.SUPER_ADMIN, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.DOCTOR, ROLES.PHARMACIST, ROLES.NURSE, ROLES.BILLING_STAFF]),
   prescriptionController.getAllPrescriptions
 );
 
