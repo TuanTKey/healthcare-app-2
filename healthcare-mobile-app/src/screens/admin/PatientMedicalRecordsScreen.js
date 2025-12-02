@@ -29,7 +29,9 @@ const PatientMedicalRecordsScreen = ({ navigation }) => {
       setLoading(true);
       console.log('📋 Fetching all medical records');
       
-      const response = await api.get('/medicalRecord');
+      const response = await api.get('/medical-records', {
+        params: { limit: 100 }
+      });
       console.log('📋 Medical records response:', response.data);
       
       let recordsList = [];
@@ -43,9 +45,10 @@ const PatientMedicalRecordsScreen = ({ navigation }) => {
         recordsList = response.data;
       }
       
+      console.log('📋 Parsed records count:', recordsList.length);
       setRecords(recordsList);
     } catch (error) {
-      console.error('❌ Lỗi tải hồ sơ bệnh án:', error.message);
+      console.error('❌ Lỗi tải hồ sơ bệnh án:', error.message, error.response?.data);
       Alert.alert('Lỗi', 'Không thể tải danh sách hồ sơ bệnh án');
       setRecords([]);
     } finally {
@@ -166,7 +169,7 @@ const PatientMedicalRecordsScreen = ({ navigation }) => {
                     {record.recordId}
                   </Text>
                   <Text variant="bodySmall" style={styles.patientName}>
-                    Bệnh nhân: {record.patientId?.personalInfo?.firstName || 'N/A'}
+                    Bệnh nhân: {record.patientId?.personalInfo?.firstName || record.patientId?.email || 'N/A'}
                   </Text>
                 </View>
                 <Chip
@@ -179,33 +182,33 @@ const PatientMedicalRecordsScreen = ({ navigation }) => {
               <View style={{height: 1, backgroundColor: '#ccc', marginVertical: 10}} />
 
               <View style={styles.infoRow}>
+                <MaterialIcons name="folder" size={16} color="#666" />
+                <Text variant="bodySmall" style={styles.infoText}>
+                  Số lượt khám: {record.visits?.length || 0}
+                </Text>
+              </View>
+
+              <View style={styles.infoRow}>
                 <MaterialIcons name="event" size={16} color="#666" />
                 <Text variant="bodySmall" style={styles.infoText}>
-                  {format(new Date(record.visitDate), 'dd/MM/yyyy', { locale: vi })}
+                  Ngày tạo: {record.createdAt ? format(new Date(record.createdAt), 'dd/MM/yyyy', { locale: vi }) : 'N/A'}
                 </Text>
               </View>
 
-              <View style={styles.infoRow}>
-                <MaterialIcons name="person" size={16} color="#666" />
-                <Text variant="bodySmall" style={styles.infoText}>
-                  Bác sĩ: {record.doctorId?.personalInfo?.firstName || record.doctorId?.email || 'N/A'}
-                </Text>
-              </View>
-
-              <View style={styles.infoRow}>
-                <MaterialIcons name="business" size={16} color="#666" />
-                <Text variant="bodySmall" style={styles.infoText}>
-                  {record.department}
-                </Text>
-              </View>
-
-              {record.chiefComplaint && (
-                <View style={styles.complaintSection}>
-                  <Text variant="bodySmall" style={styles.complaintLabel}>
-                    Lý do khám:
+              {record.visits && record.visits.length > 0 && (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="schedule" size={16} color="#666" />
+                  <Text variant="bodySmall" style={styles.infoText}>
+                    Lần khám gần nhất: {format(new Date(record.visits[record.visits.length - 1]?.visitDate), 'dd/MM/yyyy', { locale: vi })}
                   </Text>
-                  <Text variant="bodySmall" style={styles.complaintText}>
-                    {record.chiefComplaint}
+                </View>
+              )}
+
+              {record.patientInfo?.bloodType && (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="opacity" size={16} color="#666" />
+                  <Text variant="bodySmall" style={styles.infoText}>
+                    Nhóm máu: {record.patientInfo.bloodType}
                   </Text>
                 </View>
               )}
@@ -214,9 +217,12 @@ const PatientMedicalRecordsScreen = ({ navigation }) => {
                 mode="outlined"
                 style={styles.detailButton}
                 icon="eye"
-                onPress={() => navigation.navigate('MedicalRecordDetail', { recordId: record.recordId || record._id })}
+                onPress={() => navigation.navigate('AdminMedicalRecordDetail', { 
+                  recordId: record.recordId, 
+                  patientId: record.patientId?._id 
+                })}
               >
-                Xem Chi Tiết
+                Xem Chi Tiết ({record.visits?.length || 0} lượt khám)
               </Button>
             </Card.Content>
           </Card>
