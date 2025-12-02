@@ -11,6 +11,7 @@ import DoctorPatients from '../screens/doctor/DoctorPatients';
 import DoctorMedicalRecords from '../screens/doctor/DoctorMedicalRecords';
 import DoctorPrescriptions from '../screens/doctor/DoctorPrescriptions';
 import DoctorLabOrders from '../screens/doctor/DoctorLabOrders';
+import CreatePrescription from '../screens/doctor/CreatePrescription';
 
 // Shared Screens
 import ProfileScreen from '../screens/shared/ProfileScreen';
@@ -213,10 +214,9 @@ const DoctorNavigator = () => (
     />
     <Stack.Screen 
       name="CreatePrescription" 
-      component={DoctorPrescriptions}
+      component={CreatePrescription}
       options={{
-        headerShown: true,
-        title: 'Kê đơn thuốc'
+        headerShown: false
       }}
     />
     <Stack.Screen 

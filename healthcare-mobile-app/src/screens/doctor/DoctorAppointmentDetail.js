@@ -371,6 +371,31 @@ const DoctorAppointmentDetail = ({ navigation, route }) => {
               <MaterialIcons name="done-all" size={20} color="#fff" />
               <Text style={styles.actionButtonText}>Hoàn thành khám</Text>
             </TouchableOpacity>
+          ) : appointment.status === 'COMPLETED' ? (
+            <View style={styles.completedActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.prescriptionButton]}
+                onPress={() => navigation.navigate('CreatePrescription', { 
+                  appointment: appointment,
+                  patientId: appointment.patientId?._id || appointment.patient?._id,
+                  patientName: getPatientName()
+                })}
+              >
+                <MaterialIcons name="medication" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Kê đơn thuốc</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.labOrderButton]}
+                onPress={() => navigation.navigate('CreateLabOrder', { 
+                  appointment: appointment,
+                  patientId: appointment.patientId?._id || appointment.patient?._id,
+                  patientName: getPatientName()
+                })}
+              >
+                <MaterialIcons name="science" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Chỉ định XN</Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
         </View>
 
@@ -687,6 +712,16 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#F44336'
+  },
+  completedActions: {
+    flexDirection: 'row',
+    gap: 12
+  },
+  prescriptionButton: {
+    backgroundColor: '#FF9800'
+  },
+  labOrderButton: {
+    backgroundColor: '#9C27B0'
   },
   quickActions: {
     flexDirection: 'row',
