@@ -1,5 +1,6 @@
 const Appointment = require('../models/appointment.model');
 const User = require('../models/user.model');
+const MedicalRecord = require('../models/medicalRecord.model');
 const { AppError, ERROR_CODES } = require('../middlewares/error.middleware');
 const { generateMedicalCode } = require('../utils/healthcare.utils');
 
@@ -218,6 +219,14 @@ class AppointmentService {
         appointment.actualStartTime = new Date();
       } else if (status === 'COMPLETED') {
         appointment.actualEndTime = new Date();
+        
+        // 🎯 TỰ ĐỘNG TẠO HỒ SƠ BỆNH ÁN KHI HOÀN THÀNH KHÁM
+        try {
+          await this.createMedicalRecordFromAppointment(appointment);
+        } catch (mrError) {
+          console.error('⚠️ [APPOINTMENT] Failed to create medical record:', mrError.message);
+          // Không throw error - vẫn cho phép complete appointment
+        }
       } else if (status === 'CANCELLED') {
         appointment.cancellation = {
           cancelledBy: updatedBy,
@@ -917,6 +926,14 @@ class AppointmentService {
           appointment.actualStartTime = new Date();
         } else if (newStatus === 'COMPLETED') {
           appointment.actualEndTime = new Date();
+          
+          // 🎯 TỰ ĐỘNG TẠO HỒ SƠ BỆNH ÁN KHI HOÀN THÀNH KHÁM
+          try {
+            await this.createMedicalRecordFromAppointment(appointment);
+          } catch (mrError) {
+            console.error('⚠️ [APPOINTMENT] Failed to create medical record:', mrError.message);
+            // Không throw error - vẫn cho phép complete appointment
+          }
         }
       }
 
@@ -940,6 +957,56 @@ class AppointmentService {
 
     } catch (error) {
       console.error('❌ [APPOINTMENT] Update appointment failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 🎯 TỰ ĐỘNG TẠO HỒ SƠ BỆNH ÁN TỪ LỊCH KHÁM ĐÃ HOÀN THÀNH
+   */
+  async createMedicalRecordFromAppointment(appointment) {
+    try {
+      console.log('📋 [APPOINTMENT] Creating medical record from appointment:', appointment.appointmentId);
+
+      // Populate appointment để lấy thông tin
+      const populatedAppointment = await Appointment.findById(appointment._id)
+        .populate('patientId', 'personalInfo email')
+        .populate('doctorId', 'personalInfo department specialization');
+
+      if (!populatedAppointment) {
+        throw new Error('Không tìm thấy lịch khám');
+      }
+
+      // Tạo recordId
+      const recordId = `MR${generateMedicalCode(8)}`;
+
+      // Tạo hồ sơ bệnh án
+      const medicalRecord = new MedicalRecord({
+        recordId,
+        patientId: populatedAppointment.patientId._id,
+        doctorId: populatedAppointment.doctorId._id,
+        appointmentId: populatedAppointment._id,
+        department: populatedAppointment.doctorId.department || 'GENERAL',
+        visitType: populatedAppointment.type === 'FOLLOW_UP' ? 'FOLLOW_UP' : 'OUTPATIENT',
+        visitDate: populatedAppointment.appointmentDate,
+        chiefComplaint: populatedAppointment.reason || populatedAppointment.symptoms || 'Khám định kỳ',
+        historyOfPresentIllness: populatedAppointment.description || '',
+        symptoms: populatedAppointment.symptoms ? [{
+          symptom: populatedAppointment.symptoms,
+          severity: 'MODERATE',
+          duration: 'Không rõ'
+        }] : [],
+        status: 'COMPLETED',
+        createdBy: populatedAppointment.doctorId._id
+      });
+
+      await medicalRecord.save();
+
+      console.log('✅ [APPOINTMENT] Medical record created:', recordId);
+      return medicalRecord;
+
+    } catch (error) {
+      console.error('❌ [APPOINTMENT] Create medical record failed:', error.message);
       throw error;
     }
   }
