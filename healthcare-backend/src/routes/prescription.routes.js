@@ -44,6 +44,13 @@ router.post(
   prescriptionController.createPrescription
 );
 
+// Route kê đơn đơn giản (không cần validation phức tạp)
+router.post(
+  '/patients/:patientId/simple',
+  requirePermission(PERMISSIONS['PRESCRIPTION.CREATE']),
+  prescriptionController.createSimplePrescription
+);
+
 router.put(
   '/:prescriptionId',
   requirePermission(PERMISSIONS['PRESCRIPTION.UPDATE']),

@@ -125,6 +125,68 @@ class PrescriptionService {
     }
   }
 
+  // Tạo đơn thuốc đơn giản (không cần medicationId từ database)
+  async createSimplePrescription(patientId, prescriptionData, doctorId) {
+    try {
+      // Kiểm tra bệnh nhân tồn tại - tìm theo cả ObjectId và custom patientId
+      let patient = await Patient.findOne({ userId: patientId });
+      if (!patient) {
+        patient = await Patient.findOne({ patientId: patientId });
+      }
+      if (!patient) {
+        patient = await Patient.findById(patientId);
+      }
+      if (!patient) {
+        throw new AppError('Bệnh nhân không tồn tại', 404);
+      }
+
+      // Tạo prescription ID
+      const prescriptionId = await generateMedicalCode('PR');
+
+      // Transform medications để phù hợp với schema
+      const transformedMedications = prescriptionData.medications.map(med => ({
+        name: med.name,
+        dosage: {
+          value: 1,
+          unit: med.dosage || 'viên',
+          form: 'tablet'
+        },
+        frequency: {
+          timesPerDay: parseInt(med.frequency) || 1,
+          instructions: med.frequency
+        },
+        duration: {
+          value: parseInt(med.duration) || 7,
+          unit: 'days'
+        },
+        route: 'ORAL',
+        totalQuantity: parseInt(med.quantity) || 1,
+        instructions: med.instructions || ''
+      }));
+
+      const prescription = new Prescription({
+        prescriptionId,
+        patientId: patient.userId || patient._id,
+        doctorId,
+        medications: transformedMedications,
+        notes: prescriptionData.notes || prescriptionData.diagnosis,
+        specialInstructions: prescriptionData.diagnosis,
+        drugInteractionsChecked: false,
+        createdBy: doctorId,
+        status: 'ACTIVE'
+      });
+
+      await prescription.save();
+      
+      // Populate thông tin trước khi trả về
+      await prescription.populate('patientId', 'personalInfo email');
+      
+      return prescription;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // Lấy thông tin đơn thuốc
   async getPrescription(prescriptionId) {
     let query = {};

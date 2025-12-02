@@ -36,6 +36,25 @@ class PrescriptionController {
     });
   });
 
+  // Tạo đơn thuốc đơn giản (cho bác sĩ kê đơn nhanh)
+  createSimplePrescription = asyncHandler(async (req, res) => {
+    const { patientId } = req.params;
+    const prescriptionData = req.body;
+    const doctorId = req.user._id;
+
+    const prescription = await prescriptionService.createSimplePrescription(
+      patientId, 
+      prescriptionData, 
+      doctorId
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo đơn thuốc thành công',
+      data: prescription
+    });
+  });
+
   // Lấy thông tin đơn thuốc
   getPrescription = asyncHandler(async (req, res) => {
     const { prescriptionId } = req.params;

@@ -108,7 +108,7 @@ const CreatePrescription = ({ navigation, route }) => {
 
       console.log('📝 Creating prescription:', prescriptionData);
 
-      const response = await api.post(`/prescriptions/patients/${patientId}/prescriptions`, prescriptionData);
+      const response = await api.post(`/prescriptions/patients/${patientId}/simple`, prescriptionData);
       
       if (response.data?.success) {
         Alert.alert(

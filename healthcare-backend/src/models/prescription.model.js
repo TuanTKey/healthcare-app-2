@@ -40,7 +40,7 @@ const prescriptionSchema = new mongoose.Schema({
     medicationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Medication',
-      required: true
+      required: false // Không bắt buộc khi kê đơn tự do
     },
     name: {
       type: String,
