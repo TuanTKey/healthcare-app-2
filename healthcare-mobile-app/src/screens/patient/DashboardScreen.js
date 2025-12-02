@@ -91,7 +91,7 @@ const DashboardScreen = ({ navigation }) => {
 
       // Fetch prescriptions
       try {
-        const prescriptionsRes = await api.get(`/patients/${user._id}/prescriptions`);
+        const prescriptionsRes = await api.get(`/prescriptions/patients/${user._id}/prescriptions`);
         console.log('💊 Prescriptions response:', prescriptionsRes.data);
         
         if (prescriptionsRes.data?.data?.data && Array.isArray(prescriptionsRes.data.data.data)) {
@@ -108,7 +108,7 @@ const DashboardScreen = ({ navigation }) => {
 
       // Fetch bills
       try {
-        const billsRes = await api.get(`/patients/${user._id}/bills`);
+        const billsRes = await api.get(`/bills/patients/${user._id}/bills`);
         console.log('💰 Bills response:', billsRes.data);
         
         if (billsRes.data?.data?.data && Array.isArray(billsRes.data.data.data)) {

@@ -82,18 +82,28 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
+      console.log('📝 Register attempt:', userData.email);
       const response = await authAPI.register(userData);
+      console.log('✅ Register API response:', response.data);
       
-      if (response.data.data.tokens?.accessToken) {
-        await SecureStore.setItemAsync('authToken', response.data.data.tokens.accessToken);
+      // API trả về accessToken và refreshToken trực tiếp, không trong tokens object
+      const accessToken = response.data.data?.accessToken || response.data.data?.tokens?.accessToken;
+      
+      if (accessToken) {
+        await SecureStore.setItemAsync('authToken', accessToken);
+        console.log('💾 Token saved after registration');
       }
       
       return {
-        user: normalizeUserData(response.data.data.user),
-        token: response.data.data.tokens.accessToken
+        user: response.data.data?.user ? normalizeUserData(response.data.data.user) : null,
+        token: accessToken,
+        message: response.data.message
       };
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      console.log('❌ Register failed:', error.response?.data || error.message);
+      return rejectWithValue(error.response?.data || { 
+        message: error.message || 'Đăng ký thất bại' 
+      });
     }
   }
 );
@@ -179,17 +189,23 @@ const authSlice = createSlice({
       .addCase(register.pending, (state) => {
         state.isRegistering = true;
         state.error = null;
+        console.log('📝 Register pending...');
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isRegistering = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
         state.error = null;
+        // Chỉ set authenticated nếu có user và token
+        if (action.payload.user && action.payload.token) {
+          state.isAuthenticated = true;
+          state.user = action.payload.user;
+          state.token = action.payload.token;
+        }
+        console.log('✅ Register fulfilled:', action.payload.message);
       })
       .addCase(register.rejected, (state, action) => {
         state.isRegistering = false;
         state.error = action.payload;
+        console.log('❌ Register rejected:', action.payload);
       });
   },
 });

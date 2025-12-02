@@ -45,12 +45,22 @@ const RegisterScreen = ({ navigation }) => {
       };
 
       const result = await dispatch(register(userData)).unwrap();
-      console.log('Register successful:', result);
-      alert('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigation.navigate('Login');
+      console.log('✅ Register result:', result);
+      
+      // Đăng ký thành công - nếu đã có token thì không cần navigate
+      if (result.token && result.user) {
+        // Đã auto login, không cần navigate
+        alert(result.message || 'Đăng ký thành công!');
+      } else {
+        // Cần đăng nhập riêng
+        alert(result.message || 'Đăng ký thành công! Vui lòng đăng nhập.');
+        navigation.navigate('Login');
+      }
     } catch (error) {
-      console.log('Register failed:', error);
-      alert(error.message || 'Đăng ký thất bại');
+      console.log('❌ Register error:', error);
+      // Hiển thị lỗi từ server hoặc message mặc định
+      const errorMessage = error?.message || error?.error || 'Đăng ký thất bại. Vui lòng thử lại.';
+      alert(errorMessage);
     }
   };
 

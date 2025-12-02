@@ -3,10 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const Chip = ({
   children,
+  label,
   style,
   textStyle,
   mode = 'outlined',
   onPress,
+  icon,
   ...props
 }) => {
   const isOutlined = mode === 'outlined';
@@ -16,19 +18,24 @@ const Chip = ({
     style,
   ];
 
+  // Support both 'label' and 'children' props
+  const content = label || children;
+
   return (
     <TouchableOpacity
       style={chipStyles}
       onPress={onPress}
       disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
       {...props}
     >
-      {typeof children === 'string' ? (
+      {icon && <View style={styles.iconContainer}>{icon}</View>}
+      {typeof content === 'string' ? (
         <Text style={[styles.text, textStyle]}>
-          {children}
+          {content}
         </Text>
       ) : (
-        children
+        content
       )}
     </TouchableOpacity>
   );
@@ -55,6 +62,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#007AFF',
     fontWeight: '500',
+  },
+  iconContainer: {
+    marginRight: 4,
   },
 });
 
