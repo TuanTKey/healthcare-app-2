@@ -10,10 +10,10 @@ const DashboardScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = React.useState(false);
   const [stats, setStats] = useState([
-    { icon: 'event', label: 'Lịch hẹn', value: '0', color: '#4CAF50', screen: 'Appointments' },
-    { icon: 'local-pharmacy', label: 'Đơn thuốc', value: '0', color: '#2196F3', screen: 'Prescriptions' },
-    { icon: 'receipt', label: 'Hóa đơn', value: '0', color: '#FF9800', screen: 'Billing' },
-    { icon: 'folder', label: 'Hồ sơ', value: '0', color: '#9C27B0', screen: 'Records' },
+    { icon: 'event', label: 'Lịch hẹn', value: '0', color: '#4CAF50', screen: 'Appointments', params: { tab: 'pending' } },
+    { icon: 'local-pharmacy', label: 'Đơn thuốc', value: '0', color: '#2196F3', screen: 'Prescriptions', params: {} },
+    { icon: 'receipt', label: 'Hóa đơn', value: '0', color: '#FF9800', screen: 'Billing', params: {} },
+    { icon: 'check-circle', label: 'Đã khám', value: '0', color: '#9C27B0', screen: 'Appointments', params: { tab: 'completed' } },
   ]);
 
   const quickActions = [
@@ -49,44 +49,38 @@ const DashboardScreen = ({ navigation }) => {
       console.log('📊 Fetching dashboard stats for user:', user._id);
 
       let appointmentCount = 0;
-      let recordCount = 0;
+      let completedAppointmentCount = 0;
       let prescriptionCount = 0;
       let billCount = 0;
 
-      // Fetch appointments
+      // Fetch appointments - only pending (not COMPLETED or CANCELLED)
       try {
         const appointmentsRes = await api.get(`/appointments/patient/${user._id}`);
         console.log('📊 Appointments response:', appointmentsRes.data);
         
+        let allAppointments = [];
         if (appointmentsRes.data?.data?.data && Array.isArray(appointmentsRes.data.data.data)) {
-          appointmentCount = appointmentsRes.data.data.data.length;
+          allAppointments = appointmentsRes.data.data.data;
         } else if (appointmentsRes.data?.data?.appointments && Array.isArray(appointmentsRes.data.data.appointments)) {
-          appointmentCount = appointmentsRes.data.data.appointments.length;
+          allAppointments = appointmentsRes.data.data.appointments;
         } else if (appointmentsRes.data?.data && Array.isArray(appointmentsRes.data.data)) {
-          appointmentCount = appointmentsRes.data.data.length;
+          allAppointments = appointmentsRes.data.data;
         }
-        console.log('📅 Appointments count:', appointmentCount);
+        
+        // Filter out completed and cancelled appointments for pending count
+        const pendingAppointments = allAppointments.filter(apt => 
+          apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED'
+        );
+        appointmentCount = pendingAppointments.length;
+        
+        // Count completed appointments
+        const completedAppointments = allAppointments.filter(apt => apt.status === 'COMPLETED');
+        completedAppointmentCount = completedAppointments.length;
+        
+        console.log('📅 Pending appointments:', appointmentCount);
+        console.log('✅ Completed appointments:', completedAppointmentCount);
       } catch (err) {
         console.warn('⚠️ Failed to fetch appointments:', err.message);
-      }
-
-      // Fetch medical records
-      try {
-        const recordsRes = await api.get(`/medical-records/patient/${user._id}/records`);
-        console.log('📋 Medical records response:', recordsRes.data);
-        
-        if (recordsRes.data?.data?.medicalRecords && Array.isArray(recordsRes.data.data.medicalRecords)) {
-          recordCount = recordsRes.data.data.medicalRecords.length;
-        } else if (recordsRes.data?.data?.data && Array.isArray(recordsRes.data.data.data)) {
-          recordCount = recordsRes.data.data.data.length;
-        } else if (recordsRes.data?.data && Array.isArray(recordsRes.data.data)) {
-          recordCount = recordsRes.data.data.length;
-        } else if (Array.isArray(recordsRes.data)) {
-          recordCount = recordsRes.data.length;
-        }
-        console.log('📄 Medical records count:', recordCount);
-      } catch (err) {
-        console.warn('⚠️ Failed to fetch medical records:', err.message);
       }
 
       // Fetch prescriptions
@@ -94,11 +88,12 @@ const DashboardScreen = ({ navigation }) => {
         const prescriptionsRes = await api.get(`/prescriptions/patients/${user._id}/prescriptions`);
         console.log('💊 Prescriptions response:', prescriptionsRes.data);
         
-        if (prescriptionsRes.data?.data?.data && Array.isArray(prescriptionsRes.data.data.data)) {
-          prescriptionCount = prescriptionsRes.data.data.data.length;
+        // Response: { success, data: { prescriptions: [...], pagination: {...} } }
+        if (prescriptionsRes.data?.data?.prescriptions && Array.isArray(prescriptionsRes.data.data.prescriptions)) {
+          prescriptionCount = prescriptionsRes.data.data.prescriptions.length;
+        } else if (prescriptionsRes.data?.data?.pagination?.total) {
+          prescriptionCount = prescriptionsRes.data.data.pagination.total;
         } else if (prescriptionsRes.data?.data && Array.isArray(prescriptionsRes.data.data)) {
-          prescriptionCount = prescriptionsRes.data.data.length;
-        } else if (Array.isArray(prescriptionsRes.data?.data)) {
           prescriptionCount = prescriptionsRes.data.data.length;
         }
         console.log('💊 Prescriptions count:', prescriptionCount);
@@ -111,11 +106,12 @@ const DashboardScreen = ({ navigation }) => {
         const billsRes = await api.get(`/bills/patients/${user._id}/bills`);
         console.log('💰 Bills response:', billsRes.data);
         
-        if (billsRes.data?.data?.data && Array.isArray(billsRes.data.data.data)) {
-          billCount = billsRes.data.data.data.length;
+        // Response: { success, data: { docs: [...], totalDocs, ... } } (paginated)
+        if (billsRes.data?.data?.docs && Array.isArray(billsRes.data.data.docs)) {
+          billCount = billsRes.data.data.docs.length;
+        } else if (billsRes.data?.data?.totalDocs) {
+          billCount = billsRes.data.data.totalDocs;
         } else if (billsRes.data?.data && Array.isArray(billsRes.data.data)) {
-          billCount = billsRes.data.data.length;
-        } else if (Array.isArray(billsRes.data?.data)) {
           billCount = billsRes.data.data.length;
         }
         console.log('💰 Bills count:', billCount);
@@ -125,10 +121,10 @@ const DashboardScreen = ({ navigation }) => {
 
       // Update stats
       setStats(prevStats => [
-        { ...prevStats[0], value: appointmentCount.toString(), screen: 'Appointments' },
-        { ...prevStats[1], value: prescriptionCount.toString(), screen: 'Prescriptions' },
-        { ...prevStats[2], value: billCount.toString(), screen: 'Billing' },
-        { ...prevStats[3], value: recordCount.toString(), screen: 'Records' },
+        { ...prevStats[0], value: appointmentCount.toString() },
+        { ...prevStats[1], value: prescriptionCount.toString() },
+        { ...prevStats[2], value: billCount.toString() },
+        { ...prevStats[3], value: completedAppointmentCount.toString() },
       ]);
     } catch (error) {
       console.error('Lỗi lấy thống kê:', error);
@@ -170,7 +166,7 @@ const DashboardScreen = ({ navigation }) => {
             <TouchableOpacity 
               key={index} 
               style={styles.statCardWrapper}
-              onPress={() => navigation.navigate(stat.screen)}
+              onPress={() => navigation.navigate(stat.screen, stat.params)}
               activeOpacity={0.7}
             >
               <Card style={styles.statCard}>

@@ -20,11 +20,12 @@ import Card from '../../components/common/Card';
 import TextInput from '../../components/common/TextInput';
 import DateTimePicker from '../../components/common/DateTimePicker';
 
-const AppointmentScreen = () => {
+const AppointmentScreen = ({ route }) => {
   const { user } = useSelector(state => state.auth);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'completed'
   
   // Date/Time picker states
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -38,6 +39,13 @@ const AppointmentScreen = () => {
       description: '',
     }
   });
+
+  // Check if navigated with specific tab
+  useEffect(() => {
+    if (route?.params?.tab) {
+      setActiveTab(route.params.tab);
+    }
+  }, [route?.params?.tab]);
 
   useEffect(() => {
     fetchAppointments();
@@ -195,6 +203,15 @@ const AppointmentScreen = () => {
     }
   };
 
+  // Filter appointments based on active tab
+  const pendingAppointments = appointments.filter(apt => 
+    apt.status !== 'COMPLETED' && apt.status !== 'CANCELLED'
+  );
+  const completedAppointments = appointments.filter(apt => 
+    apt.status === 'COMPLETED'
+  );
+  const displayedAppointments = activeTab === 'pending' ? pendingAppointments : completedAppointments;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -319,21 +336,59 @@ const AppointmentScreen = () => {
 
         {/* Appointments List - Always visible */}
         <View style={styles.appointmentsList}>
-          <Text style={styles.listTitle}>
-            Danh Sách Lịch Hẹn ({appointments.length})
-          </Text>
+          {/* Tabs */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+              onPress={() => setActiveTab('pending')}
+            >
+              <MaterialIcons 
+                name="event" 
+                size={20} 
+                color={activeTab === 'pending' ? '#1976d2' : '#666'} 
+              />
+              <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+                Chờ khám ({pendingAppointments.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'completed' && styles.activeTab]}
+              onPress={() => setActiveTab('completed')}
+            >
+              <MaterialIcons 
+                name="check-circle" 
+                size={20} 
+                color={activeTab === 'completed' ? '#4CAF50' : '#666'} 
+              />
+              <Text style={[styles.tabText, activeTab === 'completed' && styles.activeTabText]}>
+                Đã khám ({completedAppointments.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {loading ? (
             <Text style={styles.emptyText}>Đang tải...</Text>
-          ) : appointments.length > 0 ? (
+          ) : displayedAppointments.length > 0 ? (
             <FlatList
-              data={appointments}
+              data={displayedAppointments}
               renderItem={renderAppointmentCard}
               keyExtractor={(item) => item._id || Math.random().toString()}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
           ) : (
-            <Text style={styles.emptyText}>Chưa có lịch hẹn nào. Hãy tạo một lịch hẹn mới!</Text>
+            <View style={styles.emptyContainer}>
+              <MaterialIcons 
+                name={activeTab === 'pending' ? 'event-busy' : 'history'} 
+                size={48} 
+                color="#ccc" 
+              />
+              <Text style={styles.emptyText}>
+                {activeTab === 'pending' 
+                  ? 'Không có lịch hẹn nào đang chờ' 
+                  : 'Chưa có lịch khám hoàn thành'}
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -454,11 +509,49 @@ const styles = StyleSheet.create({
   separator: {
     height: 8,
   },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
   emptyText: {
     textAlign: 'center',
     color: '#999',
     fontSize: 14,
-    marginTop: 20,
+    marginTop: 12,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 6,
+  },
+  activeTab: {
+    backgroundColor: '#e3f2fd',
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
   errorText: {
     color: '#d32f2f',

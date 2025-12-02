@@ -325,14 +325,14 @@ class BillingService {
    */
   async getPatientBills(patientId, userId, userRole, filters = {}) {
     try {
-      // Kiểm tra bệnh nhân tồn tại
-      const patient = await Patient.findById(patientId);
+      // Kiểm tra bệnh nhân tồn tại (patientId là User ID)
+      const patient = await User.findById(patientId);
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, 'PATIENT_NOT_FOUND');
       }
 
-      // Kiểm tra quyền truy cập
-      if (userRole === 'PATIENT' && patientId !== userId) {
+      // Kiểm tra quyền truy cập - so sánh string
+      if (userRole === 'PATIENT' && patientId.toString() !== userId.toString()) {
         throw new AppError('Bạn chỉ được xem hóa đơn của chính mình', 403, 'ACCESS_DENIED');
       }
 

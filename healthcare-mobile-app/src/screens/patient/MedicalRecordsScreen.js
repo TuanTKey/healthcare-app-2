@@ -126,7 +126,7 @@ const MedicalRecordsScreen = ({ navigation }) => {
                   <View style={styles.infoRow}>
                     <MaterialIcons name="person" size={16} color="#666" />
                     <Text variant="bodyMedium" style={styles.infoText}>
-                      BS. {visit.doctorId?.personalInfo?.firstName || visit.doctorId?.personalInfo?.lastName || visit.doctorId?.email || 'N/A'}
+                      BS. {visit.doctorId?.personalInfo?.lastName || ''} {visit.doctorId?.personalInfo?.firstName || 'N/A'}
                     </Text>
                   </View>
                 )}
