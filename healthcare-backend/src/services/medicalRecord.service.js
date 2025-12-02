@@ -55,7 +55,7 @@ class MedicalRecordService {
       // 🎯 POPULATE KẾT QUẢ
       const result = await MedicalRecord.findById(medicalRecord._id)
         .populate('patientId', 'personalInfo email phone dateOfBirth gender address')
-        .populate('doctorId', 'personalInfo email phone specialization department')
+        .populate('visits.doctorId', 'personalInfo email phone specialization department')
         .populate('createdBy', 'personalInfo email');
 
       console.log('✅ [MEDICAL] Medical record created successfully:', recordId);
@@ -77,7 +77,7 @@ class MedicalRecordService {
       // 🎯 TRY TÌM THEO recordId HOẶC _id (MongoDB)
       let medicalRecord = await MedicalRecord.findOne({ recordId })
         .populate('patientId', 'personalInfo email phone dateOfBirth gender address')
-        .populate('doctorId', 'personalInfo email phone specialization department')
+        .populate('visits.doctorId', 'personalInfo email phone specialization department')
         .populate('createdBy', 'personalInfo email')
         .populate('lastModifiedBy', 'personalInfo email');
 
@@ -85,7 +85,7 @@ class MedicalRecordService {
       if (!medicalRecord) {
         medicalRecord = await MedicalRecord.findById(recordId)
           .populate('patientId', 'personalInfo email phone dateOfBirth gender address')
-          .populate('doctorId', 'personalInfo email phone specialization department')
+          .populate('visits.doctorId', 'personalInfo email phone specialization department')
           .populate('createdBy', 'personalInfo email')
           .populate('lastModifiedBy', 'personalInfo email');
       }
@@ -112,14 +112,12 @@ class MedicalRecordService {
       const { 
         page = 1, 
         limit = 10,
-        visitType,
         status,
         startDate,
         endDate,
-        sortBy = 'visitDate',
+        sortBy = 'createdAt',
         sortOrder = 'desc',
-        patientId,
-        doctorId
+        patientId
       } = filters;
 
       const skip = (page - 1) * limit;
@@ -127,15 +125,13 @@ class MedicalRecordService {
       // 🎯 BUILD QUERY
       let query = {};
       
-      if (visitType) query.visitType = visitType;
       if (status) query.status = status;
       if (patientId) query.patientId = patientId;
-      if (doctorId) query.doctorId = doctorId;
 
       if (startDate || endDate) {
-        query.visitDate = {};
-        if (startDate) query.visitDate.$gte = new Date(startDate);
-        if (endDate) query.visitDate.$lte = new Date(endDate);
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = new Date(startDate);
+        if (endDate) query.createdAt.$lte = new Date(endDate);
       }
 
       const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
@@ -144,7 +140,7 @@ class MedicalRecordService {
       const [medicalRecords, total] = await Promise.all([
         MedicalRecord.find(query)
           .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-          .populate('doctorId', 'personalInfo email specialization department')
+          .populate('visits.doctorId', 'personalInfo email specialization department')
           .sort(sort)
           .skip(skip)
           .limit(limit),
@@ -407,7 +403,7 @@ class MedicalRecordService {
       // 🎯 LẤY KẾT QUẢ MỚI NHẤT
       const updatedRecord = await MedicalRecord.findOne({ recordId })
         .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-        .populate('doctorId', 'personalInfo email specialization department')
+        .populate('visits.doctorId', 'personalInfo email specialization department')
         .populate('lastModifiedBy', 'personalInfo email');
 
       console.log('✅ [MEDICAL] Medical record updated:', recordId);
@@ -503,7 +499,7 @@ class MedicalRecordService {
       // 🎯 POPULATE KẾT QUẢ
       const result = await MedicalRecord.findById(medicalRecord._id)
         .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-        .populate('doctorId', 'personalInfo email')
+        .populate('visits.doctorId', 'personalInfo email')
         .populate('lastModifiedBy', 'personalInfo email');
 
       console.log('✅ [MEDICAL] Vital signs recorded for patient:', patientId);
@@ -913,7 +909,7 @@ class MedicalRecordService {
       // 🎯 POPULATE KẾT QUẢ
       const result = await MedicalRecord.findById(medicalRecord._id)
         .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-        .populate('doctorId', 'personalInfo email specialization');
+        .populate('visits.doctorId', 'personalInfo email specialization');
 
       console.log('✅ [MEDICAL] Clinical findings recorded:', recordId);
       return result;
@@ -955,8 +951,8 @@ class MedicalRecordService {
       const [medicalRecords, total] = await Promise.all([
         MedicalRecord.find(query)
           .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-          .populate('doctorId', 'personalInfo email specialization department')
-          .sort({ visitDate: -1 })
+          .populate('visits.doctorId', 'personalInfo email specialization department')
+          .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit),
         MedicalRecord.countDocuments(query)
