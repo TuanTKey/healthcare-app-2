@@ -91,11 +91,11 @@ const DoctorDashboard = () => {
         todayAppts = todayTotal;
         completedAppts = todayCompleted;
 
-        // Lấy lịch hôm nay - hiển thị tất cả (kể cả hoàn thành), chỉ bỏ đã hủy
+        // Lấy lịch hôm nay - chỉ hiển thị lịch chờ khám (chưa hoàn thành, chưa hủy)
         const todayAppointments = appointments
           .filter(apt => {
             const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date).toDateString();
-            return aptDate === today && apt.status !== 'CANCELLED';
+            return aptDate === today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
           })
           .sort((a, b) => 
             new Date(a.scheduledTime || a.appointmentDate || a.date) - 
