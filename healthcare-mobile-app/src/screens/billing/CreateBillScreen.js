@@ -385,48 +385,59 @@ const CreateBillScreen = ({ navigation }) => {
               <MaterialIcons name="medication" size={20} color="#ff9800" /> Danh sách thuốc ({prescriptionResult.medications?.length || 0})
             </Text>
             
-            {prescriptionResult.medications?.map((med, index) => (
-              <View key={index} style={styles.medicationItem}>
-                <View style={styles.medicationHeader}>
-                  <Text style={styles.medicationNumber}>#{index + 1}</Text>
-                  <Text style={styles.medicationName}>{med.name}</Text>
-                </View>
-                
-                <View style={styles.medicationDetails}>
-                  {med.dosage && (
-                    <Text style={styles.medicationInfo}>
-                      Liều lượng: {med.dosage.value} {med.dosage.unit} - {med.dosage.form}
+            {prescriptionResult.medications?.map((med, index) => {
+              const unitPrice = med.dosage?.unitPrice || med.unitPrice || 10000;
+              const quantity = med.totalQuantity || 1;
+              const itemTotal = quantity * unitPrice;
+              
+              return (
+                <View key={index} style={styles.medicationItem}>
+                  <View style={styles.medicationHeader}>
+                    <Text style={styles.medicationNumber}>#{index + 1}</Text>
+                    <Text style={styles.medicationName}>{med.name}</Text>
+                  </View>
+                  
+                  <View style={styles.medicationDetails}>
+                    {med.dosage && (
+                      <Text style={styles.medicationInfo}>
+                        Liều lượng: {med.dosage.value} {med.dosage.unit} - {med.dosage.form}
+                      </Text>
+                    )}
+                    {med.frequency && (
+                      <Text style={styles.medicationInfo}>
+                        Tần suất: {med.frequency.timesPerDay}x/ngày - {med.frequency.instructions}
+                      </Text>
+                    )}
+                    {med.duration && (
+                      <Text style={styles.medicationInfo}>
+                        Thời gian: {med.duration.value} {med.duration.unit}
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <View style={styles.medicationPriceSection}>
+                    <View style={styles.medicationPriceRow}>
+                      <Text style={styles.priceLabel}>Số lượng:</Text>
+                      <Text style={styles.priceValue}>{quantity}</Text>
+                    </View>
+                    <View style={styles.medicationPriceRow}>
+                      <Text style={styles.priceLabel}>Đơn giá:</Text>
+                      <Text style={styles.priceValue}>{formatCurrency(unitPrice)}</Text>
+                    </View>
+                    <View style={[styles.medicationPriceRow, styles.itemTotalRow]}>
+                      <Text style={styles.itemTotalLabel}>Thành tiền:</Text>
+                      <Text style={styles.itemTotalValue}>{formatCurrency(itemTotal)}</Text>
+                    </View>
+                  </View>
+                  
+                  {med.instructions && (
+                    <Text style={styles.medicationInstructions}>
+                      <MaterialIcons name="info" size={14} color="#666" /> {med.instructions}
                     </Text>
                   )}
-                  {med.frequency && (
-                    <Text style={styles.medicationInfo}>
-                      Tần suất: {med.frequency.timesPerDay}x/ngày - {med.frequency.instructions}
-                    </Text>
-                  )}
-                  {med.duration && (
-                    <Text style={styles.medicationInfo}>
-                      Thời gian: {med.duration.value} {med.duration.unit}
-                    </Text>
-                  )}
-                  <Text style={styles.medicationQuantity}>
-                    Số lượng: {med.totalQuantity}
-                  </Text>
                 </View>
-                
-                <View style={styles.medicationPrice}>
-                  <Text style={styles.priceLabel}>Đơn giá:</Text>
-                  <Text style={styles.priceValue}>
-                    {formatCurrency(med.dosage?.unitPrice || med.unitPrice || 10000)}
-                  </Text>
-                </View>
-                
-                {med.instructions && (
-                  <Text style={styles.medicationInstructions}>
-                    <MaterialIcons name="info" size={14} color="#666" /> {med.instructions}
-                  </Text>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </Card>
 
           {/* Bill Options */}
@@ -1055,6 +1066,34 @@ const styles = StyleSheet.create({
     borderTopColor: '#ffe0b2',
     paddingTop: 10,
     marginBottom: 5,
+  },
+  medicationPriceSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#ffe0b2',
+    paddingTop: 10,
+    marginBottom: 5,
+  },
+  medicationPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  itemTotalRow: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#ffe0b2',
+  },
+  itemTotalLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+  },
+  itemTotalValue: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#4caf50',
   },
   priceLabel: {
     fontSize: 13,
