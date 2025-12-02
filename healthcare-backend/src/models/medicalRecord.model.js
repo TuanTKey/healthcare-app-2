@@ -1,43 +1,40 @@
 const mongoose = require('mongoose');
 
-const medicalRecordSchema = new mongoose.Schema({
-  recordId: {
+/**
+ * 🏥 MEDICAL RECORD MODEL
+ * Mỗi bệnh nhân có 1 hồ sơ bệnh án duy nhất
+ * Mỗi lần khám sẽ thêm 1 lượt khám (visit) vào hồ sơ
+ */
+
+// Schema cho mỗi lượt khám
+const visitSchema = new mongoose.Schema({
+  visitId: {
     type: String,
-    unique: true,
     required: true
   },
-  patientId: {
+  appointmentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'Appointment'
   },
   doctorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  department: {
-    type: String,
-    required: true
-  },
-  
-  // Thông tin lâm sàng
+  department: String,
   visitType: {
     type: String,
     enum: ['OUTPATIENT', 'INPATIENT', 'EMERGENCY', 'FOLLOW_UP'],
-    required: true
+    default: 'OUTPATIENT'
   },
   visitDate: {
     type: Date,
     default: Date.now
   },
-  chiefComplaint: {
-    type: String,
-    required: true
-  },
+  chiefComplaint: String,
   historyOfPresentIllness: String,
   
-  // Triệu chứng và dấu hiệu
+  // Triệu chứng
   symptoms: [{
     symptom: String,
     duration: String,
@@ -48,12 +45,11 @@ const medicalRecordSchema = new mongoose.Schema({
     notes: String
   }],
   
-  // Dấu hiệu sinh tồn
+  // Sinh hiệu
   vitalSigns: {
     bloodPressure: {
       systolic: Number,
-      diastolic: Number,
-      type: String // Allow simple string format like "120/80"
+      diastolic: Number
     },
     heartRate: Number,
     respiratoryRate: Number,
@@ -68,15 +64,15 @@ const medicalRecordSchema = new mongoose.Schema({
     }
   },
   
-  // Khám thực thể - Support both nested object and simple string
+  // Khám thực thể
   physicalExamination: {
-    type: mongoose.Schema.Types.Mixed, // Allow both object and string
+    type: mongoose.Schema.Types.Mixed
   },
   
   // Chẩn đoán
   diagnoses: [{
     diagnosis: String,
-    code: String, // ICD-10 code
+    code: String,
     type: {
       type: String,
       enum: ['PRIMARY', 'SECONDARY', 'DIFFERENTIAL']
@@ -88,32 +84,112 @@ const medicalRecordSchema = new mongoose.Schema({
     notes: String
   }],
   
-  // Kế hoạch điều trị - Support both object and simple string
+  // Kế hoạch điều trị
   treatmentPlan: {
-    type: mongoose.Schema.Types.Mixed, // Allow both object and string
+    type: mongoose.Schema.Types.Mixed
   },
-
-  // Ghi chú chung
+  
+  // Đơn thuốc liên quan
+  prescriptions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Prescription'
+  }],
+  
+  // Xét nghiệm liên quan
+  labOrders: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'LabOrder'
+  }],
+  
+  // Ghi chú
   notes: String,
+  
+  // Trạng thái
+  status: {
+    type: String,
+    enum: ['DRAFT', 'COMPLETED', 'CANCELLED'],
+    default: 'COMPLETED'
+  },
+  
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
+}, { timestamps: true });
+
+// Schema chính cho hồ sơ bệnh án
+const medicalRecordSchema = new mongoose.Schema({
+  recordId: {
+    type: String,
+    unique: true,
+    required: true
+  },
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true // MỖI BỆNH NHÂN CHỈ CÓ 1 HỒ SƠ
+  },
+  
+  // Thông tin cơ bản bệnh nhân (snapshot)
+  patientInfo: {
+    fullName: String,
+    dateOfBirth: Date,
+    gender: String,
+    bloodType: String,
+    phone: String,
+    address: String
+  },
+  
+  // Tiền sử bệnh
+  medicalHistory: {
+    allergies: [{
+      allergen: String,
+      reaction: String,
+      severity: String
+    }],
+    chronicConditions: [{
+      condition: String,
+      diagnosedDate: Date,
+      status: String,
+      notes: String
+    }],
+    familyHistory: [{
+      condition: String,
+      relationship: String,
+      notes: String
+    }],
+    surgicalHistory: [{
+      procedure: String,
+      date: Date,
+      hospital: String,
+      notes: String
+    }],
+    immunizations: [{
+      vaccine: String,
+      date: Date,
+      notes: String
+    }]
+  },
+  
+  // DANH SÁCH CÁC LƯỢT KHÁM
+  visits: [visitSchema],
   
   // Trạng thái hồ sơ
   status: {
     type: String,
-    enum: ['DRAFT', 'COMPLETED', 'ARCHIVED'],
-    default: 'DRAFT'
+    enum: ['ACTIVE', 'INACTIVE', 'ARCHIVED'],
+    default: 'ACTIVE'
   },
   
-  // Bảo mật và quyền riêng tư
+  // Bảo mật
   privacyLevel: {
     type: String,
     enum: ['STANDARD', 'SENSITIVE', 'RESTRICTED'],
     default: 'STANDARD'
   },
   
-  // Thời gian điều trị
-  duration: Number, // minutes
-  
-  // Audit trail
+  // Audit
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -130,116 +206,70 @@ const medicalRecordSchema = new mongoose.Schema({
 });
 
 // Indexes
-medicalRecordSchema.index({ patientId: 1, visitDate: -1 });
-medicalRecordSchema.index({ doctorId: 1 });
+medicalRecordSchema.index({ patientId: 1 });
 medicalRecordSchema.index({ recordId: 1 });
-medicalRecordSchema.index({ 'diagnoses.code': 1 });
+medicalRecordSchema.index({ 'visits.visitDate': -1 });
+medicalRecordSchema.index({ 'visits.doctorId': 1 });
 medicalRecordSchema.index({ status: 1 });
-medicalRecordSchema.index({ department: 1 });
-medicalRecordSchema.index({ visitType: 1 });
 
 // Virtuals
-medicalRecordSchema.virtual('consultations', {
-  ref: 'Consultation',
-  localField: '_id',
-  foreignField: 'medicalRecordId'
+medicalRecordSchema.virtual('totalVisits').get(function() {
+  return this.visits ? this.visits.length : 0;
 });
 
-medicalRecordSchema.virtual('prescriptions', {
-  ref: 'Prescription',
-  localField: '_id',
-  foreignField: 'medicalRecordId'
-});
-
-medicalRecordSchema.virtual('labOrders', {
-  ref: 'LabOrder',
-  localField: '_id',
-  foreignField: 'medicalRecordId'
+medicalRecordSchema.virtual('lastVisit').get(function() {
+  if (!this.visits || this.visits.length === 0) return null;
+  return this.visits.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate))[0];
 });
 
 // Methods
+medicalRecordSchema.methods.addVisit = function(visitData) {
+  this.visits.push(visitData);
+  return this.save();
+};
+
+medicalRecordSchema.methods.getVisitById = function(visitId) {
+  return this.visits.find(v => v.visitId === visitId || v._id.toString() === visitId);
+};
+
 medicalRecordSchema.methods.calculateBMI = function() {
-  if (!this.vitalSigns.height || !this.vitalSigns.weight) return null;
-  const heightInMeters = this.vitalSigns.height / 100;
-  return (this.vitalSigns.weight / (heightInMeters * heightInMeters)).toFixed(1);
-};
-
-medicalRecordSchema.methods.hasDiagnosis = function(diagnosisCode) {
-  return this.diagnoses.some(d => d.code === diagnosisCode);
-};
-
-medicalRecordSchema.methods.getRecentVitalSigns = function() {
-  if (!this.vitalSigns) return null;
-  return {
-    bloodPressure: this.vitalSigns.bloodPressure,
-    heartRate: this.vitalSigns.heartRate,
-    respiratoryRate: this.vitalSigns.respiratoryRate,
-    temperature: this.vitalSigns.temperature,
-    recordedAt: this.vitalSigns.recordedAt || this.updatedAt
-  };
-};
-
-medicalRecordSchema.methods.hasActiveDiagnosis = function() {
-  return this.diagnoses && this.diagnoses.some(d => 
-    d.certainty === 'CONFIRMED'
-  );
-};
-
-medicalRecordSchema.methods.getActiveMedications = function() {
-  if (!this.treatmentPlan || !this.treatmentPlan.medicalHistory) return [];
-  return this.treatmentPlan.medicalHistory.filter(history =>
-    history.category === 'MEDICATION' && history.status === 'ACTIVE'
-  );
+  const lastVisit = this.lastVisit;
+  if (!lastVisit?.vitalSigns?.height || !lastVisit?.vitalSigns?.weight) return null;
+  const heightInMeters = lastVisit.vitalSigns.height / 100;
+  return (lastVisit.vitalSigns.weight / (heightInMeters * heightInMeters)).toFixed(1);
 };
 
 // Statics
-medicalRecordSchema.statics.findByDiagnosis = function(diagnosisCode) {
-  return this.find({ 'diagnoses.code': diagnosisCode });
+medicalRecordSchema.statics.findByPatient = function(patientId) {
+  return this.findOne({ patientId });
 };
 
-medicalRecordSchema.statics.findByPatientAndDateRange = function(patientId, startDate, endDate) {
-  return this.find({
-    patientId,
-    visitDate: {
-      $gte: startDate,
-      $lte: endDate
-    }
-  }).sort({ visitDate: -1 });
-};
-
-medicalRecordSchema.statics.getDepartmentStats = async function(department, startDate, endDate) {
-  const stats = await this.aggregate([
-    {
-      $match: {
-        department,
-        visitDate: {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate)
-        }
-      }
-    },
-    {
-      $group: {
-        _id: '$visitType',
-        total: { $sum: 1 },
-        completed: {
-          $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] }
-        },
-        averageDuration: { $avg: '$duration' }
-      }
-    }
-  ]);
-
-  return stats;
+medicalRecordSchema.statics.findOrCreateForPatient = async function(patientId, createdBy) {
+  let record = await this.findOne({ patientId });
+  
+  if (!record) {
+    const { generateMedicalCode } = require('../utils/healthcare.utils');
+    const recordId = `MR${generateMedicalCode(8)}`;
+    
+    record = new this({
+      recordId,
+      patientId,
+      visits: [],
+      createdBy
+    });
+    await record.save();
+  }
+  
+  return record;
 };
 
 medicalRecordSchema.statics.getPatientMedicalHistory = async function(patientId) {
-  const records = await this.find({ patientId })
-    .select('visitDate visitType chiefComplaint diagnoses treatmentPlan.medicalHistory')
-    .sort({ visitDate: -1 })
-    .populate('doctorId', 'personalInfo.name specialization');
-
-  return records;
+  const record = await this.findOne({ patientId })
+    .populate('visits.doctorId', 'personalInfo email specialization')
+    .populate('visits.prescriptions')
+    .populate('visits.labOrders');
+  
+  return record;
 };
 
 module.exports = mongoose.model('MedicalRecord', medicalRecordSchema);

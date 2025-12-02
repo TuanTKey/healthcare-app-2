@@ -26,9 +26,12 @@ const MedicalRecordsScreen = ({ navigation }) => {
       const response = await api.get(`/medical-records/patient/${user._id}/records`);
       console.log('📋 Medical records response:', response.data);
       
-      // Parse response - handle different formats
+      // Parse response - API trả về { medicalRecord, visits, pagination }
       let recordsList = [];
-      if (response.data?.data?.medicalRecords && Array.isArray(response.data.data.medicalRecords)) {
+      if (response.data?.data?.visits && Array.isArray(response.data.data.visits)) {
+        // Cấu trúc mới: lấy danh sách visits
+        recordsList = response.data.data.visits;
+      } else if (response.data?.data?.medicalRecords && Array.isArray(response.data.data.medicalRecords)) {
         recordsList = response.data.data.medicalRecords;
       } else if (response.data?.data?.data && Array.isArray(response.data.data.data)) {
         recordsList = response.data.data.data;
@@ -38,7 +41,7 @@ const MedicalRecordsScreen = ({ navigation }) => {
         recordsList = response.data;
       }
       
-      console.log('📋 Parsed records count:', recordsList.length);
+      console.log('📋 Parsed records/visits count:', recordsList.length);
       setRecords(recordsList);
     } catch (error) {
       console.error('⚠️ Lỗi tải hồ sơ bệnh án:', error.message);
@@ -84,16 +87,16 @@ const MedicalRecordsScreen = ({ navigation }) => {
           <Card.Content style={styles.emptyContent}>
             <MaterialIcons name="folder-open" size={48} color="#ccc" />
             <Text variant="titleMedium" style={styles.emptyText}>
-              Chưa có hồ sơ bệnh án
+              Chưa có lượt khám nào
             </Text>
             <Text variant="bodyMedium" style={styles.emptySubtext}>
-              Các thông tin khám chữa bệnh sẽ xuất hiện ở đây
+              Lịch sử khám chữa bệnh sẽ xuất hiện ở đây
             </Text>
           </Card.Content>
         </Card>
       ) : (
-        records.map((record, index) => (
-          <Card key={record._id || index} style={styles.recordCard}>
+        records.map((visit, index) => (
+          <Card key={visit._id || visit.visitId || index} style={styles.recordCard}>
             <Card.Content>
               <View style={styles.cardHeader}>
                 <View style={styles.dateSection}>
@@ -101,12 +104,12 @@ const MedicalRecordsScreen = ({ navigation }) => {
                     NGÀY KHÁM
                   </Text>
                   <Text variant="titleMedium" style={styles.date}>
-                    {record.visitDate ? format(new Date(record.visitDate), 'dd/MM/yyyy') : 'N/A'}
+                    {visit.visitDate ? format(new Date(visit.visitDate), 'dd/MM/yyyy') : 'N/A'}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, record.status === 'COMPLETED' && styles.completedBadge]}>
+                <View style={[styles.statusBadge, visit.status === 'COMPLETED' && styles.completedBadge]}>
                   <Text style={styles.statusText}>
-                    {record.status === 'COMPLETED' ? 'HOÀN THÀNH' : record.status || 'ĐANG ĐIỀU TRỊ'}
+                    {visit.status === 'COMPLETED' ? 'HOÀN THÀNH' : visit.status || 'ĐANG ĐIỀU TRỊ'}
                   </Text>
                 </View>
               </View>
@@ -114,74 +117,79 @@ const MedicalRecordsScreen = ({ navigation }) => {
               <View style={{height: 1, backgroundColor: '#ccc', marginVertical: 10}} />
 
               <View style={styles.infoSection}>
-                {record.doctorId && (
+                {visit.doctorId && (
                   <View style={styles.infoRow}>
                     <MaterialIcons name="person" size={16} color="#666" />
                     <Text variant="bodyMedium" style={styles.infoText}>
-                      {record.doctorId?.personalInfo?.firstName || record.doctorId?.email || 'N/A'}
+                      BS. {visit.doctorId?.personalInfo?.firstName || visit.doctorId?.personalInfo?.lastName || visit.doctorId?.email || 'N/A'}
                     </Text>
                   </View>
                 )}
                 
-                {record.department && (
+                {visit.department && (
                   <View style={styles.infoRow}>
                     <MaterialIcons name="business" size={16} color="#666" />
                     <Text variant="bodyMedium" style={styles.infoText}>
-                      {record.department}
+                      {visit.department}
                     </Text>
                   </View>
                 )}
 
-                {record.visitType && (
+                {visit.visitType && (
                   <View style={styles.infoRow}>
                     <MaterialIcons name="local-hospital" size={16} color="#666" />
                     <Text variant="bodyMedium" style={styles.infoText}>
-                      {record.visitType}
+                      {visit.visitType === 'OUTPATIENT' ? 'Ngoại trú' : 
+                       visit.visitType === 'INPATIENT' ? 'Nội trú' :
+                       visit.visitType === 'EMERGENCY' ? 'Cấp cứu' :
+                       visit.visitType === 'FOLLOW_UP' ? 'Tái khám' : visit.visitType}
                     </Text>
                   </View>
                 )}
               </View>
 
-              {record.diagnosis && (
+              {visit.chiefComplaint && (
                 <View style={styles.diagnosisSection}>
                   <Text variant="titleSmall" style={styles.sectionTitle}>
-                    Chẩn đoán
+                    Lý do khám
                   </Text>
                   <Text variant="bodyMedium" style={styles.diagnosisText}>
-                    {record.diagnosis}
+                    {visit.chiefComplaint}
                   </Text>
                 </View>
               )}
 
-              {record.symptoms && record.symptoms.length > 0 && (
+              {visit.symptoms && visit.symptoms.length > 0 && (
                 <View style={styles.symptomsSection}>
                   <Text variant="titleSmall" style={styles.sectionTitle}>
                     Triệu chứng
                   </Text>
                   <Text variant="bodyMedium" style={styles.symptomsText}>
-                    {Array.isArray(record.symptoms) ? record.symptoms.join(', ') : record.symptoms}
+                    {Array.isArray(visit.symptoms) 
+                      ? visit.symptoms.map(s => s.symptom || s).join(', ') 
+                      : visit.symptoms}
                   </Text>
                 </View>
               )}
 
-              {record.treatment && (
+              {visit.diagnoses && visit.diagnoses.length > 0 && (
                 <View style={styles.treatmentSection}>
                   <Text variant="titleSmall" style={styles.sectionTitle}>
-                    Điều trị
+                    Chẩn đoán
                   </Text>
                   <Text variant="bodyMedium" style={styles.treatmentText}>
-                    {record.treatment}
+                    {visit.diagnoses.map(d => d.diagnosis || d.description || d).join(', ')}
                   </Text>
                 </View>
               )}
 
-              {record.notes && (
+              {visit.notes && (
                 <View style={styles.notesSection}>
                   <Text variant="titleSmall" style={styles.sectionTitle}>
                     Ghi chú
                   </Text>
                   <Text variant="bodyMedium" style={styles.notesText}>
-                    {record.notes}
+                    {visit.notes}
                   </Text>
                 </View>
               )}
@@ -189,7 +197,10 @@ const MedicalRecordsScreen = ({ navigation }) => {
               <Button 
                 mode="outlined" 
                 style={styles.detailButton}
-                onPress={() => navigation.navigate('MedicalRecordDetail', { recordId: record.recordId || record._id })}
+                onPress={() => navigation.navigate('MedicalRecordDetail', { 
+                  visitId: visit._id || visit.visitId,
+                  recordId: visit.recordId 
+                })}
               >
                 Xem chi tiết
               </Button>

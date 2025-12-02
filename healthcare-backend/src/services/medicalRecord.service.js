@@ -173,61 +173,85 @@ class MedicalRecordService {
   }
 
   /**
-   * 🎯 LẤY TẤT CẢ HỒ SƠ BỆNH ÁN CỦA BỆNH NHÂN
+   * 🎯 LẤY HỒ SƠ BỆNH ÁN CỦA BỆNH NHÂN (1 bệnh nhân = 1 hồ sơ với nhiều lượt khám)
    */
   async getPatientMedicalRecords(patientId, filters = {}) {
     try {
-      console.log('📋 [MEDICAL] Getting medical records for patient:', patientId);
+      console.log('📋 [MEDICAL] Getting medical record for patient:', patientId);
 
-      const { 
-        page = 1, 
-        limit = 10,
-        visitType,
-        status,
-        startDate,
-        endDate,
-        sortBy = 'visitDate',
-        sortOrder = 'desc'
-      } = filters;
+      // Tìm hồ sơ bệnh án của bệnh nhân
+      const medicalRecord = await MedicalRecord.findOne({ patientId })
+        .populate('patientId', 'personalInfo email phone dateOfBirth gender')
+        .populate('visits.doctorId', 'personalInfo email specialization department');
 
-      const skip = (page - 1) * limit;
-
-      // 🎯 BUILD QUERY
-      let query = { patientId };
-      
-      if (visitType) query.visitType = visitType;
-      if (status) query.status = status;
-
-      if (startDate || endDate) {
-        query.visitDate = {};
-        if (startDate) query.visitDate.$gte = new Date(startDate);
-        if (endDate) query.visitDate.$lte = new Date(endDate);
+      if (!medicalRecord) {
+        return {
+          medicalRecord: null,
+          visits: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalItems: 0,
+            itemsPerPage: 10,
+            hasNext: false,
+            hasPrev: false
+          }
+        };
       }
 
-      const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+      // Sắp xếp visits theo ngày mới nhất
+      let visits = medicalRecord.visits || [];
+      visits = visits.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
 
-      // 🎯 THỰC HIỆN TÌM KIẾM
-      const [medicalRecords, total] = await Promise.all([
-        MedicalRecord.find(query)
-          .populate('patientId', 'personalInfo email phone dateOfBirth gender')
-          .populate('doctorId', 'personalInfo email specialization department')
-          .sort(sort)
-          .skip(skip)
-          .limit(limit),
-        MedicalRecord.countDocuments(query)
-      ]);
+      // Áp dụng filters
+      const { visitType, status, startDate, endDate } = filters;
+      
+      if (visitType) {
+        visits = visits.filter(v => v.visitType === visitType);
+      }
+      if (status) {
+        visits = visits.filter(v => v.status === status);
+      }
+      if (startDate) {
+        visits = visits.filter(v => new Date(v.visitDate) >= new Date(startDate));
+      }
+      if (endDate) {
+        visits = visits.filter(v => new Date(v.visitDate) <= new Date(endDate));
+      }
 
-      // 🎯 TÍNH TOÁN PHÂN TRANG
-      const totalPages = Math.ceil(total / limit);
+      // Phân trang
+      const page = parseInt(filters.page) || 1;
+      const limit = parseInt(filters.limit) || 10;
+      const skip = (page - 1) * limit;
+      const total = visits.length;
+      const paginatedVisits = visits.slice(skip, skip + limit);
 
       return {
-        medicalRecords,
+        medicalRecord: {
+          recordId: medicalRecord.recordId,
+          patientId: medicalRecord.patientId,
+          patientInfo: medicalRecord.patientInfo,
+          medicalHistory: medicalRecord.medicalHistory,
+          status: medicalRecord.status,
+          totalVisits: total,
+          createdAt: medicalRecord.createdAt
+        },
+        visits: paginatedVisits,
         pagination: {
           currentPage: page,
-          totalPages,
+          totalPages: Math.ceil(total / limit),
           totalItems: total,
           itemsPerPage: limit,
-          hasNext: page < totalPages,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ [MEDICAL] Get patient medical records failed:', error.message);
+      throw error;
+    }
+  }
           hasPrev: page > 1
         }
       };
