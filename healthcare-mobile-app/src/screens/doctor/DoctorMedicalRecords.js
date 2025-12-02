@@ -28,12 +28,19 @@ const DoctorMedicalRecords = ({ navigation }) => {
       setLoading(true);
       const response = await api.get('/medical-records?limit=100');
       
+      console.log('📋 Medical records response:', JSON.stringify(response.data, null, 2));
+      
       let data = [];
-      if (response.data?.data?.records) {
+      // API trả về { success, data: { medicalRecords: [...], pagination } }
+      if (response.data?.data?.medicalRecords) {
+        data = response.data.data.medicalRecords;
+      } else if (response.data?.data?.records) {
         data = response.data.data.records;
       } else if (Array.isArray(response.data?.data)) {
         data = response.data.data;
       }
+
+      console.log('📋 Parsed records:', data.length);
 
       // Sort by date (newest first)
       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -54,9 +61,24 @@ const DoctorMedicalRecords = ({ navigation }) => {
 
   const RecordCard = ({ item }) => {
     const date = new Date(item.visitDate || item.createdAt);
-    const patientName = item.patient?.userId?.personalInfo 
-      ? `${item.patient.userId.personalInfo.firstName} ${item.patient.userId.personalInfo.lastName}`
-      : 'Bệnh nhân';
+    
+    // Xử lý tên bệnh nhân - patientId được populate trực tiếp
+    let patientName = 'Bệnh nhân';
+    if (item.patientId?.personalInfo) {
+      const info = item.patientId.personalInfo;
+      patientName = `${info.firstName || ''} ${info.lastName || ''}`.trim() || item.patientId.email || 'Bệnh nhân';
+    } else if (item.patient?.userId?.personalInfo) {
+      const info = item.patient.userId.personalInfo;
+      patientName = `${info.firstName || ''} ${info.lastName || ''}`.trim();
+    }
+    
+    // Xử lý tên bác sĩ
+    let doctorName = 'N/A';
+    if (item.doctorId?.personalInfo) {
+      doctorName = item.doctorId.personalInfo.lastName || item.doctorId.personalInfo.firstName || 'N/A';
+    } else if (item.doctor?.personalInfo) {
+      doctorName = item.doctor.personalInfo.lastName || 'N/A';
+    }
 
     const getRecordTypeIcon = (type) => {
       switch(type) {
@@ -124,7 +146,7 @@ const DoctorMedicalRecords = ({ navigation }) => {
           <View style={styles.footerItem}>
             <MaterialIcons name="person" size={14} color="#666" />
             <Text style={styles.footerText}>
-              BS. {item.doctor?.personalInfo?.lastName || 'N/A'}
+              BS. {doctorName}
             </Text>
           </View>
           {item.prescriptions && item.prescriptions.length > 0 && (
@@ -140,7 +162,13 @@ const DoctorMedicalRecords = ({ navigation }) => {
 
   const filteredRecords = records.filter(record => {
     if (!searchText) return true;
-    const patientName = `${record.patient?.userId?.personalInfo?.firstName || ''} ${record.patient?.userId?.personalInfo?.lastName || ''}`.toLowerCase();
+    // Xử lý tên bệnh nhân từ patientId (populated)
+    let patientName = '';
+    if (record.patientId?.personalInfo) {
+      patientName = `${record.patientId.personalInfo.firstName || ''} ${record.patientId.personalInfo.lastName || ''}`.toLowerCase();
+    } else if (record.patient?.userId?.personalInfo) {
+      patientName = `${record.patient.userId.personalInfo.firstName || ''} ${record.patient.userId.personalInfo.lastName || ''}`.toLowerCase();
+    }
     const complaint = (record.chiefComplaint || '').toLowerCase();
     const search = searchText.toLowerCase();
     return patientName.includes(search) || complaint.includes(search);
