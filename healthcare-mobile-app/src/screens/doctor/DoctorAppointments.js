@@ -8,16 +8,18 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Modal
+  Modal,
+  ScrollView
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import api from '../../services/api';
 
 const DoctorAppointments = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
+  const [allAppointments, setAllAppointments] = useState([]); // Lưu tất cả để đếm
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, today, pending, completed
+  const [filter, setFilter] = useState('today'); // Mặc định hiển thị hôm nay
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
@@ -36,26 +38,62 @@ const DoctorAppointments = ({ navigation }) => {
         data = response.data.data;
       }
 
+      // Lưu tất cả appointments để đếm
+      setAllAppointments(data);
+
       // Apply filter
-      const today = new Date().toDateString();
+      const today = new Date();
+      const todayStr = today.toDateString();
       let filtered = data;
 
-      if (filter === 'today') {
-        filtered = data.filter(apt => 
-          new Date(apt.scheduledTime || apt.date).toDateString() === today
-        );
-      } else if (filter === 'pending') {
-        filtered = data.filter(apt => 
-          apt.status === 'PENDING' || apt.status === 'CONFIRMED'
-        );
-      } else if (filter === 'completed') {
-        filtered = data.filter(apt => apt.status === 'COMPLETED');
+      switch (filter) {
+        case 'today':
+          // Lịch hẹn hôm nay (chưa hoàn thành/hủy)
+          filtered = data.filter(apt => {
+            const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date);
+            return aptDate.toDateString() === todayStr && 
+                   !['COMPLETED', 'CANCELLED'].includes(apt.status);
+          });
+          break;
+        case 'in_progress':
+          // Đang khám
+          filtered = data.filter(apt => apt.status === 'IN_PROGRESS');
+          break;
+        case 'waiting':
+          // Chờ xác nhận hoặc đã xác nhận (chờ khám)
+          filtered = data.filter(apt => 
+            apt.status === 'PENDING' || apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED'
+          );
+          break;
+        case 'completed':
+          // Hoàn thành
+          filtered = data.filter(apt => apt.status === 'COMPLETED');
+          break;
+        case 'upcoming':
+          // Lịch sắp tới (từ ngày mai trở đi)
+          filtered = data.filter(apt => {
+            const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date);
+            return aptDate > today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+          });
+          break;
+        case 'all':
+        default:
+          filtered = data;
+          break;
       }
 
-      // Sort by date
-      filtered.sort((a, b) => 
-        new Date(b.scheduledTime || b.date) - new Date(a.scheduledTime || a.date)
-      );
+      // Sort: Hôm nay và chờ khám thì sắp xếp theo giờ tăng dần, còn lại giảm dần
+      if (filter === 'today' || filter === 'waiting' || filter === 'in_progress') {
+        filtered.sort((a, b) => 
+          new Date(a.scheduledTime || a.appointmentDate || a.date) - 
+          new Date(b.scheduledTime || b.appointmentDate || b.date)
+        );
+      } else {
+        filtered.sort((a, b) => 
+          new Date(b.scheduledTime || b.appointmentDate || b.date) - 
+          new Date(a.scheduledTime || a.appointmentDate || a.date)
+        );
+      }
 
       setAppointments(filtered);
     } catch (error) {
@@ -104,16 +142,46 @@ const DoctorAppointments = ({ navigation }) => {
     }
   };
 
-  const FilterButton = ({ label, value }) => (
+  const FilterButton = ({ label, value, count }) => (
     <TouchableOpacity
       style={[styles.filterButton, filter === value && styles.filterButtonActive]}
       onPress={() => setFilter(value)}
     >
       <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
         {label}
+        {count !== undefined && count > 0 && (
+          <Text style={[styles.filterCount, filter === value && styles.filterCountActive]}>
+            {' '}({count})
+          </Text>
+        )}
       </Text>
     </TouchableOpacity>
   );
+
+  // Đếm số lượng theo từng filter
+  const getFilterCounts = () => {
+    const today = new Date();
+    const todayStr = today.toDateString();
+    
+    return {
+      today: allAppointments.filter(apt => {
+        const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date);
+        return aptDate.toDateString() === todayStr && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+      }).length,
+      in_progress: allAppointments.filter(apt => apt.status === 'IN_PROGRESS').length,
+      waiting: allAppointments.filter(apt => 
+        ['PENDING', 'SCHEDULED', 'CONFIRMED'].includes(apt.status)
+      ).length,
+      completed: allAppointments.filter(apt => apt.status === 'COMPLETED').length,
+      upcoming: allAppointments.filter(apt => {
+        const aptDate = new Date(apt.scheduledTime || apt.appointmentDate || apt.date);
+        return aptDate > today && !['COMPLETED', 'CANCELLED'].includes(apt.status);
+      }).length,
+      all: allAppointments.length
+    };
+  };
+
+  const counts = getFilterCounts();
 
   const AppointmentCard = ({ item }) => {
     const date = new Date(item.scheduledTime || item.appointmentDate || item.date);
@@ -245,12 +313,16 @@ const DoctorAppointments = ({ navigation }) => {
         />
       </View>
 
-      {/* Filters */}
+      {/* Filters - Sắp xếp theo workflow */}
       <View style={styles.filterContainer}>
-        <FilterButton label="Tất cả" value="all" />
-        <FilterButton label="Hôm nay" value="today" />
-        <FilterButton label="Chờ khám" value="pending" />
-        <FilterButton label="Hoàn thành" value="completed" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <FilterButton label="📅 Hôm nay" value="today" count={counts.today} />
+          <FilterButton label="🔄 Đang khám" value="in_progress" count={counts.in_progress} />
+          <FilterButton label="⏳ Chờ khám" value="waiting" count={counts.waiting} />
+          <FilterButton label="✅ Hoàn thành" value="completed" count={counts.completed} />
+          <FilterButton label="📆 Sắp tới" value="upcoming" count={counts.upcoming} />
+          <FilterButton label="📋 Tất cả" value="all" count={counts.all} />
+        </ScrollView>
       </View>
 
       {/* List */}
@@ -352,6 +424,13 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: '#fff',
     fontWeight: '600'
+  },
+  filterCount: {
+    fontSize: 12,
+    color: '#999'
+  },
+  filterCountActive: {
+    color: '#b2dfdb'
   },
   loadingContainer: {
     flex: 1,
