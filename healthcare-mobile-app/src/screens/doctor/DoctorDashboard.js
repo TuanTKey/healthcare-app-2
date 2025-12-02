@@ -100,21 +100,22 @@ const DoctorDashboard = () => {
       // Lấy số lượng bệnh nhân
       let totalPatients = 0;
       try {
-        const patientsRes = await api.get('/patients?limit=1');
+        const patientsRes = await api.get('/patients?limit=100');
         console.log('📊 Patients Response:', JSON.stringify(patientsRes.data));
         
         // Thử các cấu trúc response khác nhau
-        if (patientsRes.data?.data?.pagination?.total) {
+        if (patientsRes.data?.data?.pagination?.totalPatients) {
+          totalPatients = patientsRes.data.data.pagination.totalPatients;
+        } else if (patientsRes.data?.data?.pagination?.total) {
           totalPatients = patientsRes.data.data.pagination.total;
+        } else if (patientsRes.data?.pagination?.totalPatients) {
+          totalPatients = patientsRes.data.pagination.totalPatients;
         } else if (patientsRes.data?.pagination?.total) {
           totalPatients = patientsRes.data.pagination.total;
-        } else if (patientsRes.data?.data?.total) {
-          totalPatients = patientsRes.data.data.total;
-        } else if (patientsRes.data?.total) {
-          totalPatients = patientsRes.data.total;
         } else if (Array.isArray(patientsRes.data?.data?.patients)) {
-          // Nếu không có pagination, có thể endpoint trả về tất cả
           totalPatients = patientsRes.data.data.patients.length;
+        } else if (Array.isArray(patientsRes.data?.data)) {
+          totalPatients = patientsRes.data.data.length;
         }
       } catch (err) {
         console.warn('Could not fetch patients count:', err.message);
