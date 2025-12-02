@@ -28,12 +28,18 @@ const DoctorPatients = ({ navigation }) => {
       setLoading(true);
       const response = await api.get('/patients?limit=100');
       
+      console.log('📊 Patients API Response:', JSON.stringify(response.data, null, 2));
+      
       let data = [];
       if (response.data?.data?.patients) {
         data = response.data.data.patients;
       } else if (Array.isArray(response.data?.data)) {
         data = response.data.data;
+      } else if (response.data?.patients) {
+        data = response.data.patients;
       }
+
+      console.log('📋 First patient structure:', data[0] ? JSON.stringify(data[0], null, 2) : 'No patients');
 
       setPatients(data);
     } catch (error) {
@@ -62,10 +68,38 @@ const DoctorPatients = ({ navigation }) => {
   };
 
   const PatientCard = ({ item }) => {
-    const userInfo = item.userId?.personalInfo || {};
+    // Xử lý nhiều cấu trúc dữ liệu khác nhau
+    const getPatientInfo = () => {
+      // Cấu trúc 1: userId.personalInfo (Patient model với populate)
+      if (item.userId?.personalInfo) {
+        return item.userId.personalInfo;
+      }
+      // Cấu trúc 2: personalInfo trực tiếp (nếu là User)
+      if (item.personalInfo) {
+        return item.personalInfo;
+      }
+      // Cấu trúc 3: user.personalInfo
+      if (item.user?.personalInfo) {
+        return item.user.personalInfo;
+      }
+      // Cấu trúc 4: Thông tin nằm trực tiếp trong item
+      if (item.firstName || item.lastName) {
+        return {
+          firstName: item.firstName,
+          lastName: item.lastName,
+          dateOfBirth: item.dateOfBirth,
+          gender: item.gender,
+          phone: item.phone || item.phoneNumber
+        };
+      }
+      return {};
+    };
+
+    const userInfo = getPatientInfo();
     const fullName = `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 'Chưa cập nhật';
     const age = calculateAge(userInfo.dateOfBirth);
-    const gender = userInfo.gender === 'MALE' ? 'Nam' : userInfo.gender === 'FEMALE' ? 'Nữ' : 'Khác';
+    const gender = userInfo.gender === 'MALE' ? 'Nam' : userInfo.gender === 'FEMALE' ? 'Nữ' : userInfo.gender ? 'Khác' : 'N/A';
+    const phone = userInfo.phone || userInfo.phoneNumber || item.userId?.phone || item.phone;
 
     return (
       <TouchableOpacity
@@ -92,10 +126,10 @@ const DoctorPatients = ({ navigation }) => {
               <Text style={styles.infoText}>{gender}</Text>
             </View>
           </View>
-          {userInfo.phone && (
+          {phone && (
             <View style={styles.infoItem}>
               <MaterialIcons name="phone" size={14} color="#666" />
-              <Text style={styles.infoText}>{userInfo.phone}</Text>
+              <Text style={styles.infoText}>{phone}</Text>
             </View>
           )}
           <Text style={styles.patientId}>Mã BN: {item.patientId || item._id?.slice(-8)}</Text>
@@ -121,12 +155,18 @@ const DoctorPatients = ({ navigation }) => {
 
   const filteredPatients = patients.filter(patient => {
     if (!searchText) return true;
-    const userInfo = patient.userId?.personalInfo || {};
-    const fullName = `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.toLowerCase();
+    
+    // Lấy thông tin từ các cấu trúc khác nhau
+    const userInfo = patient.userId?.personalInfo || patient.personalInfo || patient.user?.personalInfo || {};
+    const firstName = userInfo.firstName || patient.firstName || '';
+    const lastName = userInfo.lastName || patient.lastName || '';
+    const fullName = `${firstName} ${lastName}`.toLowerCase();
     const patientId = (patient.patientId || '').toLowerCase();
-    const phone = (userInfo.phone || '').toLowerCase();
+    const phone = (userInfo.phone || userInfo.phoneNumber || patient.phone || '').toLowerCase();
+    const email = (patient.userId?.email || patient.email || '').toLowerCase();
     const search = searchText.toLowerCase();
-    return fullName.includes(search) || patientId.includes(search) || phone.includes(search);
+    
+    return fullName.includes(search) || patientId.includes(search) || phone.includes(search) || email.includes(search);
   });
 
   return (
