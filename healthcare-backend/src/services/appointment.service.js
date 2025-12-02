@@ -867,7 +867,7 @@ class AppointmentService {
    */
   async updateAppointment(appointmentId, updateData, updatedBy) {
     try {
-      console.log('✏️ [APPOINTMENT] Updating appointment:', appointmentId);
+      console.log('✏️ [APPOINTMENT] Updating appointment:', appointmentId, 'with data:', JSON.stringify(updateData));
 
       const appointment = await Appointment.findOne({ appointmentId });
       
