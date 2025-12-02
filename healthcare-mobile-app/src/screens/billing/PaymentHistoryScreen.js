@@ -50,7 +50,8 @@ const PaymentHistoryScreen = ({ navigation }) => {
               bill: {
                 _id: bill._id,
                 billNumber: bill.billNumber,
-                patient: bill.patient || bill.patientId,
+                patient: bill.patientId, // API returns patientId populated
+                grandTotal: bill.grandTotal,
               },
             });
           });
@@ -59,7 +60,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
 
       // Sort by date (newest first)
       allPayments.sort((a, b) => 
-        new Date(b.paidAt || b.paymentDate || b.createdAt) - new Date(a.paidAt || a.paymentDate || a.createdAt)
+        new Date(b.paymentDate || b.paidAt || b.createdAt) - new Date(a.paymentDate || a.paidAt || a.createdAt)
       );
 
       console.log('💳 Total payments found:', allPayments.length);
@@ -159,7 +160,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
           HĐ: #{item.bill?.billNumber || item.bill?._id?.slice(-8)}
         </Text>
         <Text style={styles.patientName}>
-          {item.bill?.patient?.personalInfo?.firstName} {item.bill?.patient?.personalInfo?.lastName}
+          {item.bill?.patient?.personalInfo?.firstName || ''} {item.bill?.patient?.personalInfo?.lastName || 'Không xác định'}
         </Text>
       </View>
 
@@ -167,7 +168,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
         <View style={styles.dateContainer}>
           <MaterialIcons name="access-time" size={14} color="#999" />
           <Text style={styles.paymentDate}>
-            {new Date(item.paidAt || item.createdAt).toLocaleDateString('vi-VN', {
+            {new Date(item.paymentDate || item.paidAt || item.createdAt).toLocaleDateString('vi-VN', {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
@@ -186,7 +187,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
   // Calculate today's total
   const today = new Date().toDateString();
   const todayPayments = payments.filter(p => 
-    new Date(p.paidAt || p.createdAt).toDateString() === today
+    new Date(p.paymentDate || p.paidAt || p.createdAt).toDateString() === today
   );
   const todayTotal = todayPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
@@ -236,7 +237,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
       <FlatList
         data={filteredPayments}
         renderItem={renderPaymentItem}
-        keyExtractor={(item, index) => `${item._id || index}-${item.paidAt || item.createdAt}`}
+        keyExtractor={(item, index) => `${item._id || item.paymentId || index}-${item.paymentDate || item.createdAt}`}
         contentContainerStyle={styles.listContainer}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

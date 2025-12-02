@@ -73,10 +73,10 @@ const RevenueReportScreen = ({ navigation }) => {
 
       const paidBills = periodBills.filter(b => b.status === 'PAID');
       const pendingBills = periodBills.filter(b => 
-        b.status === 'PENDING' || b.status === 'PARTIALLY_PAID'
+        b.status === 'ISSUED' || b.status === 'PARTIAL' || b.status === 'DRAFT'
       );
 
-      const totalRevenue = paidBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+      const totalRevenue = paidBills.reduce((sum, b) => sum + (b.grandTotal || 0), 0);
       const averageBillAmount = paidBills.length > 0 ? totalRevenue / paidBills.length : 0;
 
       // Payment method breakdown
@@ -113,7 +113,7 @@ const RevenueReportScreen = ({ navigation }) => {
         
         dailyRevenue.push({
           date: dayStart.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-          revenue: dayBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
+          revenue: dayBills.reduce((sum, b) => sum + (b.grandTotal || 0), 0),
           count: dayBills.length,
         });
       }
