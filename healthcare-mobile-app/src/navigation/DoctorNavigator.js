@@ -6,6 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 // Doctor Screens
 import DoctorDashboard from '../screens/doctor/DoctorDashboard';
 import DoctorAppointments from '../screens/doctor/DoctorAppointments';
+import DoctorAppointmentDetail from '../screens/doctor/DoctorAppointmentDetail';
 import DoctorPatients from '../screens/doctor/DoctorPatients';
 import DoctorMedicalRecords from '../screens/doctor/DoctorMedicalRecords';
 import DoctorPrescriptions from '../screens/doctor/DoctorPrescriptions';
@@ -165,10 +166,9 @@ const DoctorNavigator = () => (
     {/* Placeholder screens - will be implemented later */}
     <Stack.Screen 
       name="DoctorAppointmentDetail" 
-      component={DoctorAppointments}
+      component={DoctorAppointmentDetail}
       options={{
-        headerShown: true,
-        title: 'Chi tiết lịch hẹn'
+        headerShown: false
       }}
     />
     <Stack.Screen 
