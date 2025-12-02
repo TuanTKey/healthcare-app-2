@@ -55,8 +55,9 @@ class AuthService {
         );
       }
 
-      // 🎯 XÁC THỰC MẬT KHẨU
-      const isPasswordValid = await comparePassword(password, user.password);
+      // 🎯 XÁC THỰC MẬT KHẨU (hỗ trợ cả password và passwordHash từ Web backend)
+      const storedPassword = user.password || user.passwordHash;
+      const isPasswordValid = await comparePassword(password, storedPassword);
 
       if (!isPasswordValid) {
         // Xử lý increment login attempts
@@ -730,7 +731,7 @@ class AuthService {
   }
 
   /**
-   * 🎯 THÔNG BÁO TRẠNG THÁI TÀI KHOẢN
+   * 🎯 THÔNG BÁO TRẠNG THÁI TÀI KHOẢN (hỗ trợ cả Web và App backend)
    */
   getAccountStatusMessage(status) {
     const messages = {
@@ -739,6 +740,8 @@ class AuthService {
       'SUSPENDED': 'Tài khoản đã bị tạm ngưng',
       'LOCKED': 'Tài khoản đã bị khóa',
       'PENDING_APPROVAL': 'Tài khoản đang chờ phê duyệt',
+      'PENDING_VERIFICATION': 'Tài khoản đang chờ xác thực email',
+      'DEACTIVATED': 'Tài khoản đã bị vô hiệu hóa',
     };
     
     return messages[status] || 'Tài khoản không hoạt động';

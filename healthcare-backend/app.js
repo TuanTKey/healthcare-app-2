@@ -31,6 +31,9 @@ const superAdminRoutes = require('./src/routes/superAdmin.routes');
 // 🚀 KHỞI TẠO ỨNG DỤNG EXPRESS
 const app = express();
 
+// 🔧 TRUST PROXY - Cần thiết khi chạy sau reverse proxy (Render, Heroku, etc.)
+app.set('trust proxy', 1);
+
 // 🔧 KHỞI TẠO CẤU HÌNH HỆ THỐNG
 initializeConfig().catch(error => {
   console.error('❌ Lỗi khởi tạo cấu hình:', error);

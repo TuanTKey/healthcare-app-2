@@ -15,8 +15,18 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false, // Cho phép null vì Web backend dùng passwordHash
     minlength: 8
+  },
+  // 🆕 Hỗ trợ passwordHash từ Web backend
+  passwordHash: {
+    type: String,
+    required: false
+  },
+  // 🆕 Hỗ trợ name từ Web backend  
+  name: {
+    type: String,
+    required: false
   },
   role: {
     type: String,
@@ -25,10 +35,10 @@ const userSchema = new mongoose.Schema({
     default: ROLES.PATIENT
   },
   
-  // Trạng thái tài khoản
+  // Trạng thái tài khoản (hỗ trợ cả Web và App backend)
   status: {
     type: String,
-    enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_APPROVAL', 'LOCKED', 'DELETED'],
+    enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_APPROVAL', 'LOCKED', 'DELETED', 'PENDING_VERIFICATION', 'DEACTIVATED'],
     default: 'ACTIVE'
   },
   isActive: {
@@ -56,26 +66,26 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   
-  // Thông tin cá nhân
+  // Thông tin cá nhân (không required để hỗ trợ user từ Web backend)
   personalInfo: {
     firstName: {
       type: String,
-      required: true,
+      required: false,
       trim: true
     },
     lastName: {
       type: String,
-      required: true,
+      required: false,
       trim: true
     },
     dateOfBirth: {
       type: Date,
-      required: true
+      required: false
     },
     gender: {
       type: String,
       enum: ['MALE', 'FEMALE', 'OTHER'],
-      required: true
+      required: false
     },
     phone: {
       type: String,
@@ -188,7 +198,12 @@ userSchema.index({ 'professionalInfo.specialization': 1 });
 
 // Virtuals
 userSchema.virtual('fullName').get(function() {
-  return `${this.personalInfo.firstName} ${this.personalInfo.lastName}`;
+  // Hỗ trợ cả name từ Web backend và personalInfo từ App backend
+  if (this.name) return this.name;
+  if (this.personalInfo?.firstName || this.personalInfo?.lastName) {
+    return `${this.personalInfo.firstName || ''} ${this.personalInfo.lastName || ''}`.trim();
+  }
+  return '';
 });
 
 userSchema.virtual('age').get(function() {
@@ -217,7 +232,10 @@ userSchema.virtual('profilePictureUrl').get(function() {
 
 // Methods - GIỮ NGUYÊN method
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  // Hỗ trợ cả password và passwordHash (từ Web backend)
+  const storedPassword = this.password || this.passwordHash;
+  if (!storedPassword) return false;
+  return bcrypt.compare(candidatePassword, storedPassword);
 };
 
 userSchema.methods.isLocked = function() {
