@@ -251,10 +251,10 @@ class BillingService {
   async getBill(billId, userId, userRole) {
     try {
       const bill = await Bill.findById(billId)
-        .populate('patientId', 'personalInfo patientId')
-        .populate('createdBy', 'name email')
-        .populate('updatedBy', 'name email')
-        .populate('voidedBy', 'name email');
+        .populate('patientId', 'personalInfo patientId email')
+        .populate('prescriptionId', 'prescriptionId medications doctorId issueDate status')
+        .populate('createdBy', 'personalInfo email')
+        .populate('approvedBy', 'personalInfo email');
 
       if (!bill) {
         throw new AppError('Không tìm thấy hóa đơn', 404, 'BILL_NOT_FOUND');
