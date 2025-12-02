@@ -116,10 +116,30 @@ const DoctorAppointments = ({ navigation }) => {
   );
 
   const AppointmentCard = ({ item }) => {
-    const date = new Date(item.scheduledTime || item.date);
-    const patientName = item.patient?.userId?.personalInfo 
-      ? `${item.patient.userId.personalInfo.firstName} ${item.patient.userId.personalInfo.lastName}`
-      : 'Bệnh nhân';
+    const date = new Date(item.scheduledTime || item.appointmentDate || item.date);
+    
+    // 🔧 FIX: Lấy tên bệnh nhân từ đúng cấu trúc dữ liệu
+    const getPatientName = () => {
+      // Cấu trúc 1: patientId.personalInfo (từ populate)
+      if (item.patientId?.personalInfo) {
+        const info = item.patientId.personalInfo;
+        return `${info.firstName || ''} ${info.lastName || ''}`.trim() || 'Bệnh nhân';
+      }
+      // Cấu trúc 2: patient.userId.personalInfo
+      if (item.patient?.userId?.personalInfo) {
+        const info = item.patient.userId.personalInfo;
+        return `${info.firstName || ''} ${info.lastName || ''}`.trim() || 'Bệnh nhân';
+      }
+      // Cấu trúc 3: patient.personalInfo
+      if (item.patient?.personalInfo) {
+        const info = item.patient.personalInfo;
+        return `${info.firstName || ''} ${info.lastName || ''}`.trim() || 'Bệnh nhân';
+      }
+      // Fallback: email hoặc tên mặc định
+      return item.patientId?.email || item.patient?.email || 'Bệnh nhân';
+    };
+    
+    const patientName = getPatientName();
 
     return (
       <TouchableOpacity
@@ -242,8 +262,16 @@ const DoctorAppointments = ({ navigation }) => {
         <FlatList
           data={appointments.filter(apt => {
             if (!searchText) return true;
-            const name = `${apt.patient?.userId?.personalInfo?.firstName || ''} ${apt.patient?.userId?.personalInfo?.lastName || ''}`;
-            return name.toLowerCase().includes(searchText.toLowerCase());
+            // Lấy tên từ các cấu trúc khác nhau
+            const firstName = apt.patientId?.personalInfo?.firstName || 
+                             apt.patient?.userId?.personalInfo?.firstName || 
+                             apt.patient?.personalInfo?.firstName || '';
+            const lastName = apt.patientId?.personalInfo?.lastName || 
+                            apt.patient?.userId?.personalInfo?.lastName || 
+                            apt.patient?.personalInfo?.lastName || '';
+            const email = apt.patientId?.email || apt.patient?.email || '';
+            const name = `${firstName} ${lastName} ${email}`.toLowerCase();
+            return name.includes(searchText.toLowerCase());
           })}
           renderItem={({ item }) => <AppointmentCard item={item} />}
           keyExtractor={item => item._id}

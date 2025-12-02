@@ -178,7 +178,7 @@ const DoctorDashboard = () => {
         </View>
         <View style={styles.appointmentInfo}>
           <Text style={styles.patientName}>
-            {appointment.patient?.userId?.personalInfo?.firstName} {appointment.patient?.userId?.personalInfo?.lastName}
+            {appointment.patientId?.personalInfo?.firstName || appointment.patient?.userId?.personalInfo?.firstName || ''} {appointment.patientId?.personalInfo?.lastName || appointment.patient?.userId?.personalInfo?.lastName || ''}
           </Text>
           <Text style={styles.appointmentType}>{appointment.type || 'Khám bệnh'}</Text>
         </View>
