@@ -15,22 +15,32 @@ import api from '../../services/api';
 
 const DoctorAppointmentDetail = ({ navigation, route }) => {
   const { appointmentId, appointment: initialAppointment } = route.params || {};
+  
+  // Lấy ID từ appointmentId hoặc từ object appointment
+  const id = appointmentId || initialAppointment?._id;
+  
   const [appointment, setAppointment] = useState(initialAppointment || null);
   const [loading, setLoading] = useState(!initialAppointment);
   const [updating, setUpdating] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialAppointment?.notes || '');
 
   useEffect(() => {
-    if (appointmentId && !initialAppointment) {
+    // Nếu có initialAppointment, set notes từ đó
+    if (initialAppointment) {
+      setNotes(initialAppointment.notes || '');
+    }
+    // Fetch nếu có ID và chưa có dữ liệu đầy đủ
+    if (id && !initialAppointment) {
       fetchAppointment();
     }
-  }, [appointmentId]);
+  }, [id]);
 
   const fetchAppointment = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/appointments/${appointmentId}`);
+      console.log('Fetching appointment with ID:', id);
+      const response = await api.get(`/appointments/${id}`);
       if (response.data?.data) {
         setAppointment(response.data.data);
         setNotes(response.data.data.notes || '');
