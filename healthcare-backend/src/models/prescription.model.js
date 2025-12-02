@@ -185,11 +185,11 @@ prescriptionSchema.virtual('isValid').get(function() {
 });
 
 prescriptionSchema.virtual('totalMedications').get(function() {
-  return this.medications.length;
+  return this.medications?.length || 0;
 });
 
 prescriptionSchema.virtual('dispensedMedications').get(function() {
-  return this.dispenseHistory.length;
+  return this.dispenseHistory?.length || 0;
 });
 
 // Methods
