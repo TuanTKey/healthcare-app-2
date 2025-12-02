@@ -29,12 +29,19 @@ const DoctorPrescriptions = ({ navigation }) => {
       setLoading(true);
       const response = await api.get('/prescriptions?limit=100');
       
+      console.log('📋 Prescriptions response:', JSON.stringify(response.data, null, 2));
+      
       let data = [];
-      if (response.data?.data?.prescriptions) {
+      // API trả về { success, data: { data: [...], pagination } }
+      if (response.data?.data?.data) {
+        data = response.data.data.data;
+      } else if (response.data?.data?.prescriptions) {
         data = response.data.data.prescriptions;
       } else if (Array.isArray(response.data?.data)) {
         data = response.data.data;
       }
+
+      console.log('📋 Parsed prescriptions:', data.length);
 
       // Sort by date (newest first)
       data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -88,10 +95,19 @@ const DoctorPrescriptions = ({ navigation }) => {
 
   const PrescriptionCard = ({ item }) => {
     const date = new Date(item.prescriptionDate || item.createdAt);
-    const patientName = item.patient?.userId?.personalInfo 
-      ? `${item.patient.userId.personalInfo.firstName} ${item.patient.userId.personalInfo.lastName}`
-      : 'Bệnh nhân';
+    
+    // Xử lý tên bệnh nhân - patientId được populate trực tiếp
+    let patientName = 'Bệnh nhân';
+    if (item.patientId?.personalInfo) {
+      const info = item.patientId.personalInfo;
+      patientName = `${info.firstName || ''} ${info.lastName || ''}`.trim() || item.patientId.email || 'Bệnh nhân';
+    } else if (item.patient?.userId?.personalInfo) {
+      const info = item.patient.userId.personalInfo;
+      patientName = `${info.firstName || ''} ${info.lastName || ''}`.trim();
+    }
+    
     const medicationCount = item.medications?.length || 0;
+    const diagnosis = item.specialInstructions || item.notes || item.diagnosis;
 
     return (
       <TouchableOpacity
@@ -105,7 +121,7 @@ const DoctorPrescriptions = ({ navigation }) => {
           <View style={styles.prescriptionInfo}>
             <Text style={styles.patientName}>{patientName}</Text>
             <Text style={styles.prescriptionCode}>
-              Mã: {item.prescriptionNumber || item._id?.slice(-8)}
+              Mã: {item.prescriptionId || item.prescriptionNumber || item._id?.slice(-8)}
             </Text>
             <View style={styles.dateRow}>
               <MaterialIcons name="event" size={14} color="#666" />
@@ -130,7 +146,7 @@ const DoctorPrescriptions = ({ navigation }) => {
                 • {med.name || med.medication?.name}
               </Text>
               <Text style={styles.medicationDosage}>
-                {med.dosage} - {med.frequency}
+                {med.dosage?.unit || med.dosage} - {med.frequency?.instructions || med.frequency?.timesPerDay + ' lần/ngày' || med.frequency}
               </Text>
             </View>
           ))}
@@ -139,10 +155,10 @@ const DoctorPrescriptions = ({ navigation }) => {
           )}
         </View>
 
-        {item.diagnosis && (
+        {diagnosis && (
           <View style={styles.diagnosisContainer}>
             <Text style={styles.diagnosisLabel}>Chẩn đoán:</Text>
-            <Text style={styles.diagnosisText} numberOfLines={1}>{item.diagnosis}</Text>
+            <Text style={styles.diagnosisText} numberOfLines={1}>{diagnosis}</Text>
           </View>
         )}
 
