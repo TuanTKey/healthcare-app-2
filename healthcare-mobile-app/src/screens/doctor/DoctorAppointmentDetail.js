@@ -121,8 +121,8 @@ const DoctorAppointmentDetail = ({ navigation, route }) => {
   const updateStatus = async (newStatus) => {
     try {
       setUpdating(true);
-      // Sử dụng PUT /appointments/:id với body { status } 
-      await api.put(`/appointments/${appointment._id}`, { status: newStatus });
+      // Sử dụng PUT /appointments/:appointmentId với body { status } 
+      await api.put(`/appointments/${appointment.appointmentId}`, { status: newStatus });
       setAppointment({ ...appointment, status: newStatus });
       Alert.alert('Thành công', `Đã cập nhật trạng thái: ${getStatusText(newStatus)}`);
     } catch (error) {

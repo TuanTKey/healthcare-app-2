@@ -181,7 +181,7 @@ const DoctorAppointments = ({ navigation }) => {
             {item.status === 'PENDING' && (
               <TouchableOpacity
                 style={[styles.actionBtn, styles.confirmBtn]}
-                onPress={() => updateAppointmentStatus(item._id, 'CONFIRMED')}
+                onPress={() => updateAppointmentStatus(item.appointmentId, 'CONFIRMED')}
               >
                 <MaterialIcons name="check" size={16} color="#fff" />
                 <Text style={styles.actionBtnText}>Xác nhận</Text>
@@ -190,7 +190,7 @@ const DoctorAppointments = ({ navigation }) => {
             {item.status === 'CONFIRMED' && (
               <TouchableOpacity
                 style={[styles.actionBtn, styles.startBtn]}
-                onPress={() => updateAppointmentStatus(item._id, 'IN_PROGRESS')}
+                onPress={() => updateAppointmentStatus(item.appointmentId, 'IN_PROGRESS')}
               >
                 <MaterialIcons name="play-arrow" size={16} color="#fff" />
                 <Text style={styles.actionBtnText}>Bắt đầu khám</Text>
@@ -198,7 +198,7 @@ const DoctorAppointments = ({ navigation }) => {
             )}
             <TouchableOpacity
               style={[styles.actionBtn, styles.cancelBtn]}
-              onPress={() => updateAppointmentStatus(item._id, 'CANCELLED')}
+              onPress={() => updateAppointmentStatus(item.appointmentId, 'CANCELLED')}
             >
               <MaterialIcons name="close" size={16} color="#fff" />
               <Text style={styles.actionBtnText}>Hủy</Text>
@@ -210,7 +210,7 @@ const DoctorAppointments = ({ navigation }) => {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionBtn, styles.completeBtn]}
-              onPress={() => updateAppointmentStatus(item._id, 'COMPLETED')}
+              onPress={() => updateAppointmentStatus(item.appointmentId, 'COMPLETED')}
             >
               <MaterialIcons name="done-all" size={16} color="#fff" />
               <Text style={styles.actionBtnText}>Hoàn thành khám</Text>
