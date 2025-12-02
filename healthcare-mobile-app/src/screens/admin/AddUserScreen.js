@@ -86,12 +86,14 @@ const AddUserScreen = () => {
         }
       };
 
+      console.log('Creating user with payload:', payload);
       const response = await api.post('/users', payload);
+      console.log('Create user response:', response.data);
       
       if (response.data.success) {
         Alert.alert(
           'Thành công',
-          `Đã tạo tài khoản ${formData.role} thành công!`,
+          `Đã tạo tài khoản ${ROLES.find(r => r.value === formData.role)?.label || formData.role} thành công!`,
           [
             {
               text: 'OK',
@@ -101,11 +103,23 @@ const AddUserScreen = () => {
         );
       }
     } catch (error) {
-      console.error('Create user error:', error);
-      Alert.alert(
-        'Lỗi',
-        error.response?.data?.message || 'Không thể tạo tài khoản. Vui lòng thử lại.'
-      );
+      console.error('Create user error:', error.response?.data || error);
+      
+      // Xử lý các loại lỗi khác nhau
+      let errorMessage = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      // Lỗi cụ thể
+      if (errorMessage.includes('Email đã') || errorMessage.includes('email')) {
+        errorMessage = 'Email này đã được sử dụng. Vui lòng dùng email khác.';
+      }
+      
+      Alert.alert('Lỗi', errorMessage);
     } finally {
       setLoading(false);
     }
