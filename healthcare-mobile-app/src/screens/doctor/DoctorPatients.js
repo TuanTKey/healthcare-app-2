@@ -96,10 +96,16 @@ const DoctorPatients = ({ navigation }) => {
     };
 
     const userInfo = getPatientInfo();
-    const fullName = `${userInfo.firstName || ''} ${userInfo.lastName || ''}`.trim() || 'Chưa cập nhật';
+    
+    // Lấy tên - fallback về email nếu không có tên
+    const firstName = userInfo.firstName || '';
+    const lastName = userInfo.lastName || '';
+    const email = item.email || item.userId?.email || '';
+    const fullName = `${firstName} ${lastName}`.trim() || email || 'Chưa cập nhật';
+    
     const age = calculateAge(userInfo.dateOfBirth);
     const gender = userInfo.gender === 'MALE' ? 'Nam' : userInfo.gender === 'FEMALE' ? 'Nữ' : userInfo.gender ? 'Khác' : 'N/A';
-    const phone = userInfo.phone || userInfo.phoneNumber || item.userId?.phone || item.phone;
+    const phone = userInfo.phone || userInfo.phoneNumber || item.phone || item.userId?.phone;
 
     return (
       <TouchableOpacity
