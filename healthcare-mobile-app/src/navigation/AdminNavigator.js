@@ -26,6 +26,11 @@ import AppointmentManagementScreen from '../screens/admin/AppointmentManagementS
 import RevenueStatsScreen from '../screens/admin/RevenueStatsScreen';
 import SystemHealthScreen from '../screens/admin/SystemHealthScreen';
 
+// User management screens
+import AddUserScreen from '../screens/admin/AddUserScreen';
+import StaffManagementScreen from '../screens/admin/StaffManagementScreen';
+import PendingApprovalsScreen from '../screens/admin/PendingApprovalsScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -167,6 +172,31 @@ const AdminDashboardStack = () => (
       options={{ 
         title: 'Sức Khỏe Hệ Thống',
         headerShown: true
+      }}
+    />
+    {/* User Management Screens */}
+    <Stack.Screen 
+      name="AddUser"
+      component={AddUserScreen}
+      options={{ 
+        title: 'Thêm Người Dùng',
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="StaffManagement"
+      component={StaffManagementScreen}
+      options={{ 
+        title: 'Quản Lý Nhân Viên',
+        headerShown: false
+      }}
+    />
+    <Stack.Screen 
+      name="PendingApprovals"
+      component={PendingApprovalsScreen}
+      options={{ 
+        title: 'Phê Duyệt Tài Khoản',
+        headerShown: false
       }}
     />
   </Stack.Navigator>

@@ -375,20 +375,20 @@ const AdminDashboard = () => {
             icon="person-add" 
             title="Thêm User" 
             color="#11998e"
-            onPress={() => navigation.navigate('UserManagement')}
+            onPress={() => navigation.navigate('AddUser')}
           />
           <QuickAction 
             icon="badge" 
             title="Nhân Viên" 
             color="#ee0979"
-            onPress={() => navigation.navigate('UserManagement')}
+            onPress={() => navigation.navigate('StaffManagement')}
           />
           <QuickAction 
             icon="verified-user" 
             title="Phê Duyệt" 
             color="#f5576c"
             badge={stats.pendingRequests}
-            onPress={() => navigation.navigate('UserManagement')}
+            onPress={() => navigation.navigate('PendingApprovals')}
           />
         </MenuSection>
 
