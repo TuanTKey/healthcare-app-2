@@ -25,7 +25,7 @@ class BillingService {
       // Kiểm tra đơn thuốc đã có hoá đơn chưa
       const existingBill = await Bill.findOne({ 
         prescriptionId: prescriptionId,
-        status: { $ne: 'VOIDED' }
+        status: { $ne: 'WRITTEN_OFF' }
       });
       
       if (existingBill) {
@@ -287,7 +287,7 @@ class BillingService {
         throw new AppError('Không thể cập nhật hóa đơn đã thanh toán', 400, 'BILL_ALREADY_PAID');
       }
 
-      if (bill.status === 'VOIDED') {
+      if (bill.status === 'WRITTEN_OFF') {
         throw new AppError('Không thể cập nhật hóa đơn đã hủy', 400, 'BILL_VOIDED');
       }
 
@@ -312,9 +312,6 @@ class BillingService {
       if (updateData.notes !== undefined) {
         bill.notes = updateData.notes;
       }
-
-      bill.updatedBy = updatedBy;
-      bill.updatedAt = new Date();
 
       return await bill.save();
     } catch (error) {
@@ -382,7 +379,7 @@ class BillingService {
         throw new AppError('Hóa đơn đã được thanh toán', 400, 'BILL_ALREADY_PAID');
       }
 
-      if (bill.status === 'VOIDED') {
+      if (bill.status === 'WRITTEN_OFF') {
         throw new AppError('Không thể thanh toán hóa đơn đã hủy', 400, 'BILL_VOIDED');
       }
 
@@ -408,13 +405,9 @@ class BillingService {
       // Cập nhật trạng thái hóa đơn
       if (bill.paidAmount >= bill.finalAmount) {
         bill.status = 'PAID';
-        bill.paidAt = new Date();
       } else if (bill.paidAmount > 0) {
         bill.status = 'PARTIAL';
       }
-
-      bill.updatedBy = processedBy;
-      bill.updatedAt = new Date();
 
       return await bill.save();
     } catch (error) {
@@ -524,17 +517,13 @@ class BillingService {
         throw new AppError('Không thể hủy hóa đơn đã thanh toán', 400, 'BILL_ALREADY_PAID');
       }
 
-      if (bill.status === 'VOIDED') {
+      if (bill.status === 'WRITTEN_OFF') {
         throw new AppError('Hóa đơn đã được hủy trước đó', 400, 'BILL_ALREADY_VOIDED');
       }
 
-      // Hủy hóa đơn
-      bill.status = 'VOIDED';
-      bill.voidReason = reason.trim();
-      bill.voidedBy = voidedBy;
-      bill.voidedAt = new Date();
-      bill.updatedBy = voidedBy;
-      bill.updatedAt = new Date();
+      // Hủy hóa đơn - đổi status thành WRITTEN_OFF (có trong schema)
+      bill.status = 'WRITTEN_OFF';
+      bill.notes = (bill.notes ? bill.notes + ' | ' : '') + `Hủy: ${reason.trim()}`;
 
       return await bill.save();
     } catch (error) {
