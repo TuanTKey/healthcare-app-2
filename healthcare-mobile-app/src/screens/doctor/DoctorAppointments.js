@@ -97,7 +97,7 @@ const DoctorAppointments = ({ navigation }) => {
 
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
-      await api.put(`/appointments/${appointmentId}/status`, { status: newStatus });
+      await api.put(`/appointments/${appointmentId}`, { status: newStatus });
       fetchAppointments();
     } catch (error) {
       console.error('Error updating appointment:', error);
