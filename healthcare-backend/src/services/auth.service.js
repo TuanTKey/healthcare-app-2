@@ -688,18 +688,53 @@ class AuthService {
    */
   async createPatientProfile(user) {
     try {
-      const patientId = `PAT${Date.now().toString().slice(-8)}`;
+      // Kiểm tra đã có patient profile chưa
+      const existingPatient = await Patient.findOne({ userId: user._id });
+      if (existingPatient) {
+        console.log('⏭️ Patient profile already exists:', existingPatient.patientId);
+        return existingPatient;
+      }
+
+      // Tạo mã bệnh nhân theo format BN + năm tháng + số thứ tự
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const count = await Patient.countDocuments();
+      const patientId = `BN${year}${month}${String(count + 1).padStart(4, '0')}`;
       
       const patient = new Patient({
         userId: user._id,
         patientId,
         bloodType: 'UNKNOWN',
+        emergencyInfo: {
+          contactName: user.personalInfo?.emergencyContact?.name || '',
+          contactPhone: user.personalInfo?.emergencyContact?.phone || '',
+          knownAllergies: [],
+          currentMedications: []
+        },
+        lifestyle: {
+          smoking: { status: 'NEVER' },
+          alcohol: { status: 'NEVER' },
+          exercise: { frequency: 'SEDENTARY' },
+          diet: 'OMNIVORE'
+        },
+        admissionStatus: 'DISCHARGED',
+        riskLevel: 'LOW',
+        preferences: {
+          preferredLanguage: 'vi',
+          communicationMethod: 'EMAIL',
+          privacyLevel: 'STANDARD',
+          allowResearch: false,
+          emergencyContactPriority: 'MEDIUM'
+        },
         allergies: [],
-        chronicConditions: []
+        chronicConditions: [],
+        createdBy: user._id // Self-registered
       });
 
       await patient.save();
       console.log(`✅ Patient profile created: ${patientId}`);
+      return patient;
 
     } catch (error) {
       console.error('❌ Create patient profile error:', error.message);

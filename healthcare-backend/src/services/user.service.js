@@ -92,7 +92,7 @@ async createUser(userData, currentUser) {
 
     // 🎯 TẠO PATIENT PROFILE NẾU LÀ BỆNH NHÂN
     if (userData.role === ROLES.PATIENT) {
-      await this.createPatientProfile(user);
+      await this.createPatientProfile(user, currentUser._id);
     }
 
     // 📧 GỬI EMAIL CHÀO MỪNG
@@ -118,18 +118,48 @@ async createUser(userData, currentUser) {
   /**
    * 🎯 TẠO PATIENT PROFILE
    */
-  async createPatientProfile(user) {
+  async createPatientProfile(user, createdById) {
     try {
-      const patientId = `PAT${Date.now()}${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+      // Kiểm tra đã có patient profile chưa
+      const existingPatient = await Patient.findOne({ userId: user._id });
+      if (existingPatient) {
+        console.log('⏭️ [USER SERVICE] Patient profile already exists:', existingPatient.patientId);
+        return existingPatient;
+      }
+
+      // Tạo mã bệnh nhân theo format BN + năm tháng + số thứ tự
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const count = await Patient.countDocuments();
+      const patientId = `BN${year}${month}${String(count + 1).padStart(4, '0')}`;
       
       const patient = new Patient({
         userId: user._id,
         patientId: patientId,
+        bloodType: 'UNKNOWN',
+        emergencyInfo: {
+          contactName: user.personalInfo?.emergencyContact?.name || '',
+          contactPhone: user.personalInfo?.emergencyContact?.phone || '',
+          knownAllergies: [],
+          currentMedications: []
+        },
+        lifestyle: {
+          smoking: { status: 'NEVER' },
+          alcohol: { status: 'NEVER' },
+          exercise: { frequency: 'SEDENTARY' },
+          diet: 'OMNIVORE'
+        },
+        admissionStatus: 'DISCHARGED',
+        riskLevel: 'LOW',
         preferences: {
           preferredLanguage: 'vi',
           communicationMethod: 'EMAIL',
-          privacyLevel: 'STANDARD'
-        }
+          privacyLevel: 'STANDARD',
+          allowResearch: false,
+          emergencyContactPriority: 'MEDIUM'
+        },
+        createdBy: createdById
       });
 
       await patient.save();
