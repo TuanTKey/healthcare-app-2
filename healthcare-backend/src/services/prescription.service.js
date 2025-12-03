@@ -1,6 +1,7 @@
 const Prescription = require('../models/prescription.model');
 const Medication = require('../models/medication.model');
 const Patient = require('../models/patient.model');
+const MedicalRecord = require('../models/medicalRecord.model');
 const { generateMedicalCode } = require('../utils/healthcare.utils');
 const { AppError } = require('../middlewares/error.middleware');
 
@@ -183,6 +184,9 @@ class PrescriptionService {
       });
 
       await prescription.save();
+      
+      // 🎯 TỰ ĐỘNG TẠO/CẬP NHẬT MEDICAL RECORD
+      await this.createOrUpdateMedicalRecord(patient.userId || patient._id, prescription, doctorId);
       
       // Populate thông tin trước khi trả về
       await prescription.populate('patientId', 'personalInfo email');
@@ -579,6 +583,65 @@ class PrescriptionService {
 
     await medication.save();
     return medication;
+  }
+
+  /**
+   * 🎯 TẠO HOẶC CẬP NHẬT MEDICAL RECORD KHI KÊ ĐƠN THUỐC
+   */
+  async createOrUpdateMedicalRecord(patientId, prescription, doctorId) {
+    try {
+      // Kiểm tra đã có medical record chưa
+      let medicalRecord = await MedicalRecord.findOne({ patientId });
+      
+      const visitId = `VS${generateMedicalCode(8)}`;
+      const newVisit = {
+        visitId,
+        doctorId,
+        visitType: 'OUTPATIENT',
+        visitDate: new Date(),
+        chiefComplaint: prescription.specialInstructions || prescription.notes || 'Khám bệnh',
+        diagnoses: [{
+          diagnosis: prescription.specialInstructions || prescription.notes || 'Khám bệnh',
+          type: 'PRIMARY',
+          certainty: 'CONFIRMED'
+        }],
+        prescriptions: [prescription._id],
+        notes: prescription.notes || ''
+      };
+
+      if (medicalRecord) {
+        // Thêm visit mới vào medical record hiện có
+        medicalRecord.visits.push(newVisit);
+        medicalRecord.updatedBy = doctorId;
+        await medicalRecord.save();
+        console.log(`✅ Added visit ${visitId} to existing Medical Record: ${medicalRecord.recordId}`);
+      } else {
+        // Tạo medical record mới
+        const patient = await Patient.findOne({ userId: patientId });
+        const recordId = `MR${generateMedicalCode(8)}`;
+        
+        medicalRecord = new MedicalRecord({
+          recordId,
+          patientId,
+          patientInfo: {
+            bloodType: patient?.bloodType || 'UNKNOWN',
+            allergies: patient?.allergies?.map(a => a.allergen) || [],
+            chronicConditions: patient?.chronicConditions?.map(c => c.condition) || []
+          },
+          visits: [newVisit],
+          status: 'ACTIVE',
+          createdBy: doctorId
+        });
+        
+        await medicalRecord.save();
+        console.log(`✅ Created new Medical Record: ${recordId} with visit ${visitId}`);
+      }
+
+      return medicalRecord;
+    } catch (error) {
+      console.error('❌ Error creating/updating medical record:', error.message);
+      // Không throw error để không ảnh hưởng đến việc tạo prescription
+    }
   }
 }
 
