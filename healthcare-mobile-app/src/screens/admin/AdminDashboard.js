@@ -52,8 +52,6 @@ const AdminDashboard = () => {
       let appointments = [];
       let bills = [];
       let totalAppointmentsCount = 0;
-      let todayAppts = 0;
-      let pendingAppts = 0;
       let userStats = null;
       
       // 📊 Gọi API thống kê users (chính xác từ database)
@@ -80,51 +78,54 @@ const AdminDashboard = () => {
         }
       }
 
-      // 📊 Fetch appointments - lấy cả danh sách để tính today và pending
       try {
-        const appointmentsRes = await api.get('/appointments?page=1&limit=1000');
-        console.log('📊 Appointments Response:', JSON.stringify(appointmentsRes.data, null, 2));
+        // Get appointments - use stats endpoint or specific params for SUPER_ADMIN
+        const appointmentsRes = await api.get('/appointments/stats/overview');
+        console.log('📊 Appointments Stats Response:', JSON.stringify(appointmentsRes.data, null, 2));
         
-        // Extract appointments array
-        if (Array.isArray(appointmentsRes.data?.data?.data)) {
-          appointments = appointmentsRes.data.data.data;
-        } else if (Array.isArray(appointmentsRes.data?.data?.appointments)) {
-          appointments = appointmentsRes.data.data.appointments;
-        } else if (Array.isArray(appointmentsRes.data?.data)) {
-          appointments = appointmentsRes.data.data;
+        // Extract total from stats
+        if (appointmentsRes.data?.data?.total) {
+          totalAppointmentsCount = appointmentsRes.data.data.total;
+        } else if (appointmentsRes.data?.data?.totalAppointments) {
+          totalAppointmentsCount = appointmentsRes.data.data.totalAppointments;
         }
         
-        // Get total count
-        if (appointmentsRes.data?.data?.pagination?.total !== undefined) {
-          totalAppointmentsCount = appointmentsRes.data.data.pagination.total;
-        } else {
-          totalAppointmentsCount = appointments.length;
-        }
-        
-        // Calculate today's appointments
-        const today = new Date();
-        const todayStr = today.toDateString();
-        todayAppts = appointments.filter(a => {
-          const aptDate = new Date(a.appointmentDate || a.scheduledTime || a.date);
-          return aptDate.toDateString() === todayStr;
-        }).length;
-        
-        // Calculate pending appointments (SCHEDULED or CONFIRMED, not completed/cancelled)
-        pendingAppts = appointments.filter(a => 
-          a.status === 'SCHEDULED' || a.status === 'CONFIRMED' || a.status === 'PENDING'
-        ).length;
-        
-        console.log('📊 Appointments: total=', totalAppointmentsCount, 'today=', todayAppts, 'pending=', pendingAppts);
+        console.log('📊 Appointments total from stats:', totalAppointmentsCount);
       } catch (err) {
-        console.warn('Could not fetch appointments:', err.message);
+        console.warn('Could not fetch appointments stats, trying list:', err.message);
+        // Fallback to list endpoint with valid params to pass validation
+        try {
+          const appointmentsRes = await api.get('/appointments?page=1&limit=100');
+          console.log('📊 Appointments List Response:', JSON.stringify(appointmentsRes.data, null, 2));
+          
+          // Check nested structure: response.data.data.pagination
+          if (appointmentsRes.data?.data?.pagination?.total !== undefined) {
+            totalAppointmentsCount = appointmentsRes.data.data.pagination.total;
+            console.log('📊 Got appointments total from data.data.pagination:', totalAppointmentsCount);
+          } else if (appointmentsRes.data?.pagination?.total !== undefined) {
+            totalAppointmentsCount = appointmentsRes.data.pagination.total;
+            console.log('📊 Got appointments total from data.pagination:', totalAppointmentsCount);
+          }
+          
+          // Extract appointments array
+          if (Array.isArray(appointmentsRes.data?.data?.data)) {
+            appointments = appointmentsRes.data.data.data;
+          } else if (Array.isArray(appointmentsRes.data?.data)) {
+            appointments = appointmentsRes.data.data;
+          }
+          
+          console.log('📊 Appointments array length:', appointments.length);
+        } catch (e) {
+          console.warn('Could not fetch appointments list:', e.message);
+        }
       }
 
-      // 📊 Fetch bills
       try {
+        // Correct billing endpoint is /bills not /billing
         const billsRes = await api.get('/bills');
         console.log('📊 Bills API Response:', JSON.stringify(billsRes.data, null, 2));
         
-        // Handle nested structure
+        // Handle nested structure: { data: { data: { data: [...], pagination: {...} } } }
         if (Array.isArray(billsRes.data?.data?.data)) {
           bills = billsRes.data.data.data;
         } else if (billsRes.data?.data?.docs) {
@@ -142,12 +143,14 @@ const AdminDashboard = () => {
         bills = [];
       }
 
-      // Calculate revenue from PAID bills - use grandTotal (correct field)
+      const today = new Date().toDateString();
+      const todayAppts = appointments.filter(a => 
+        new Date(a.scheduledTime || a.date).toDateString() === today
+      ).length;
+
       const totalRevenue = bills
         .filter(b => b.status === 'PAID')
-        .reduce((sum, b) => sum + (b.grandTotal || b.totalAmount || b.amount || 0), 0);
-      
-      console.log('📊 Total Revenue:', totalRevenue);
+        .reduce((sum, b) => sum + (b.finalAmount || b.amount || 0), 0);
 
       // 📊 Parse user stats từ API thống kê
       let totalUsers = 0;
@@ -155,6 +158,7 @@ const AdminDashboard = () => {
       let patients = 0;
       let doctors = 0;
       let nurses = 0;
+      let pending = 0;
       let deletedUsers = 0;
       
       if (userStats) {
@@ -178,6 +182,9 @@ const AdminDashboard = () => {
             }
           }
         }
+        
+        // Calculate pending if available
+        pending = (userStats.summary?.totalUsers || 0) - (userStats.summary?.activeUsers || 0);
       }
 
       console.log('📊 Final Stats:', {
@@ -187,7 +194,7 @@ const AdminDashboard = () => {
         totalDoctors: doctors,
         totalNurses: nurses,
         totalAppointments: totalAppointmentsCount,
-        pendingRequests: pendingAppts,
+        pendingRequests: pending,
         todayAppointments: todayAppts,
         revenue: totalRevenue,
         deletedUsers
@@ -199,7 +206,7 @@ const AdminDashboard = () => {
         totalPatients: patients,
         totalDoctors: doctors,
         totalNurses: nurses,
-        pendingRequests: pendingAppts, // Sử dụng số lịch hẹn chờ duyệt
+        pendingRequests: pending < 0 ? 0 : pending,
         todayAppointments: todayAppts,
         revenue: totalRevenue,
         deletedUsers
@@ -367,9 +374,15 @@ const AdminDashboard = () => {
         <MenuSection title="Quản Lý Người Dùng">
           <QuickAction 
             icon="people" 
-            title="Tất cả Users" 
+            title="Users" 
             color="#667eea"
             onPress={() => navigation.navigate('UserManagement')}
+          />
+          <QuickAction 
+            icon="person-add" 
+            title="Thêm User" 
+            color="#11998e"
+            onPress={() => navigation.navigate('AddUser')}
           />
           <QuickAction 
             icon="badge" 
@@ -379,16 +392,10 @@ const AdminDashboard = () => {
           />
           <QuickAction 
             icon="verified-user" 
-            title="Chờ Duyệt" 
+            title="Phê Duyệt" 
             color="#f5576c"
             badge={stats.pendingRequests}
             onPress={() => navigation.navigate('PendingApprovals')}
-          />
-          <QuickAction 
-            icon="person-add" 
-            title="Thêm Mới" 
-            color="#11998e"
-            onPress={() => navigation.navigate('AddUser')}
           />
         </MenuSection>
 

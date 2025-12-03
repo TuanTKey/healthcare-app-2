@@ -24,11 +24,13 @@ const createUserBody = Joi.object({
       'string.empty': 'Vui lòng nhập tên',
       'any.required': 'Tên là bắt buộc'
     }),
-    dateOfBirth: Joi.date().max('now').optional().messages({
-      'date.max': 'Ngày sinh không được ở tương lai'
+    dateOfBirth: Joi.date().max('now').required().messages({
+      'date.max': 'Ngày sinh không được ở tương lai',
+      'any.required': 'Ngày sinh là bắt buộc'
     }),
-    gender: Joi.string().valid('MALE', 'FEMALE', 'OTHER').optional().messages({
-      'any.only': 'Giới tính không hợp lệ'
+    gender: Joi.string().valid('MALE', 'FEMALE', 'OTHER').required().messages({
+      'any.only': 'Giới tính không hợp lệ',
+      'any.required': 'Giới tính là bắt buộc'
     }),
     phone: commonSchemas.phone.required(),
     address: Joi.object({

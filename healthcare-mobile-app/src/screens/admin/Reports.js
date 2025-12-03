@@ -29,56 +29,19 @@ const Reports = ({ navigation }) => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      
-      let totalUsers = 0;
-      let patients = 0;
-      let doctors = 0;
-      let totalAppointments = 0;
-      
-      // Fetch user stats
-      try {
-        const statsRes = await api.get('/users/stats/overview');
-        if (statsRes.data?.data) {
-          const userStats = statsRes.data.data;
-          totalUsers = userStats.summary?.totalUsers || 0;
-          
-          const roleArray = userStats.byRole || [];
-          for (const roleData of roleArray) {
-            if (roleData._id === 'PATIENT') {
-              patients = roleData.total || roleData.count || 0;
-            } else if (roleData._id === 'DOCTOR') {
-              doctors = roleData.total || roleData.count || 0;
-            }
-          }
-        }
-      } catch (err) {
-        // Fallback to users list
-        const usersRes = await api.get('/users?limit=1000').catch(() => ({ data: { data: [] } }));
-        const users = usersRes.data?.data || [];
-        totalUsers = users.length;
-        patients = users.filter((u) => u.role === 'PATIENT').length;
-        doctors = users.filter((u) => u.role === 'DOCTOR').length;
-      }
-      
-      // Fetch appointments
-      try {
-        const appointmentsRes = await api.get('/appointments?page=1&limit=1000');
-        if (appointmentsRes.data?.data?.pagination?.total) {
-          totalAppointments = appointmentsRes.data.data.pagination.total;
-        } else if (Array.isArray(appointmentsRes.data?.data?.data)) {
-          totalAppointments = appointmentsRes.data.data.data.length;
-        } else if (Array.isArray(appointmentsRes.data?.data)) {
-          totalAppointments = appointmentsRes.data.data.length;
-        }
-      } catch (err) {
-        console.warn('Could not fetch appointments');
-      }
+      const [usersRes, appointmentsRes] = await Promise.all([
+        api.get('/users?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/appointments?page=1&limit=100').catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const users = usersRes.data.data || [];
+      const appointments = appointmentsRes.data.data || [];
 
       setStats({
-        totalUsers,
-        totalAppointments,
-        totalPatients: patients,
-        totalDoctors: doctors
+        totalUsers: users.length,
+        totalAppointments: appointments.length,
+        totalPatients: users.filter((u) => u.role === 'PATIENT').length,
+        totalDoctors: users.filter((u) => u.role === 'DOCTOR').length
       });
     } catch (error) {
       Alert.alert('Lỗi', 'Không thể tải báo cáo');

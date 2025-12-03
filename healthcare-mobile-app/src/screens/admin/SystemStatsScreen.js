@@ -53,33 +53,16 @@ const SystemStatsScreen = ({ navigation }) => {
       // Fetch appointments stats
       let appointmentsData = { total: 0, byStatus: {} };
       try {
-        const appointmentsRes = await api.get('/appointments?page=1&limit=1000');
-        // Extract appointments array from response
-        let appointments = [];
-        if (Array.isArray(appointmentsRes.data?.data?.data)) {
-          appointments = appointmentsRes.data.data.data;
-        } else if (Array.isArray(appointmentsRes.data?.data?.appointments)) {
-          appointments = appointmentsRes.data.data.appointments;
-        } else if (Array.isArray(appointmentsRes.data?.data)) {
-          appointments = appointmentsRes.data.data;
-        }
-        
-        // Get total from pagination or array length
-        if (appointmentsRes.data?.data?.pagination?.total) {
-          appointmentsData.total = appointmentsRes.data.data.pagination.total;
-        } else {
-          appointmentsData.total = appointments.length;
-        }
-        
+        const appointmentsRes = await api.get('/appointments?page=1&limit=100');
+        const appointments = appointmentsRes.data?.data?.appointments || appointmentsRes.data?.data || [];
+        appointmentsData.total = appointments.length;
         appointmentsData.byStatus = appointments.reduce((acc, apt) => {
           acc[apt.status] = (acc[apt.status] || 0) + 1;
           return acc;
         }, {});
-        
-        // Use appointmentDate (correct field from schema)
         appointmentsData.today = appointments.filter(apt => {
           const today = new Date().toDateString();
-          return new Date(apt.appointmentDate || apt.scheduledTime || apt.date).toDateString() === today;
+          return new Date(apt.scheduledTime || apt.date).toDateString() === today;
         }).length;
       } catch (err) {
         console.warn('Could not fetch appointments stats');
@@ -88,38 +71,18 @@ const SystemStatsScreen = ({ navigation }) => {
       // Fetch bills stats
       let billsData = { total: 0, totalRevenue: 0, byStatus: {} };
       try {
-        const billsRes = await api.get('/bills?page=1&limit=1000');
-        
-        console.log('📊 Bills API Response:', JSON.stringify(billsRes.data, null, 2));
-        
-        // Extract bills from response - structure is { success, data: { data: [], pagination: {} } }
-        let bills = [];
-        if (Array.isArray(billsRes.data?.data?.data)) {
-          bills = billsRes.data.data.data;
-        } else if (Array.isArray(billsRes.data?.data?.docs)) {
-          bills = billsRes.data.data.docs;
-        } else if (Array.isArray(billsRes.data?.data)) {
-          bills = billsRes.data.data;
-        }
-        
-        console.log('📊 Extracted bills:', bills.length, 'items');
-        
+        const billsRes = await api.get('/bills?page=1&limit=100');
+        const bills = billsRes.data?.data?.docs || billsRes.data?.data || [];
         billsData.total = bills.length;
-        // Use grandTotal (correct field from bill schema)
-        billsData.totalRevenue = bills
-          .filter(b => b.status === 'PAID')
-          .reduce((sum, bill) => sum + (bill.grandTotal || bill.totalAmount || 0), 0);
+        billsData.totalRevenue = bills.reduce((sum, bill) => sum + (bill.finalAmount || bill.amount || 0), 0);
         billsData.byStatus = bills.reduce((acc, bill) => {
           acc[bill.status] = (acc[bill.status] || 0) + 1;
           return acc;
         }, {});
         billsData.paid = bills.filter(b => b.status === 'PAID').length;
-        // Use correct status names: ISSUED, PARTIAL instead of PENDING
-        billsData.pending = bills.filter(b => b.status === 'ISSUED' || b.status === 'PARTIAL' || b.status === 'DRAFT').length;
-        
-        console.log('📊 Bills stats - total:', billsData.total, 'revenue:', billsData.totalRevenue);
+        billsData.pending = bills.filter(b => b.status === 'PENDING' || b.status === 'PARTIAL').length;
       } catch (err) {
-        console.warn('Could not fetch bills stats:', err.message);
+        console.warn('Could not fetch bills stats');
       }
 
       // Fetch lab orders stats
@@ -331,11 +294,11 @@ const SystemStatsScreen = ({ navigation }) => {
                 data={stats.bills.byStatus}
                 colors={{
                   PAID: '#4CAF50',
-                  ISSUED: '#FF9800',
+                  PENDING: '#FF9800',
                   PARTIAL: '#2196F3',
-                  DRAFT: '#9E9E9E',
-                  OVERDUE: '#E91E63',
-                  WRITTEN_OFF: '#795548'
+                  CANCELLED: '#F44336',
+                  VOIDED: '#9E9E9E',
+                  OVERDUE: '#E91E63'
                 }}
               />
               <View style={styles.billsSummary}>

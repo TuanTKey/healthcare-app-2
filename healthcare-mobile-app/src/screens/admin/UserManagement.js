@@ -28,8 +28,6 @@ const UserManagement = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -51,7 +49,7 @@ const UserManagement = ({ navigation }) => {
   // Roles that require professional info
   const PROFESSIONAL_ROLES = ['DOCTOR', 'NURSE', 'PHARMACIST', 'LAB_TECHNICIAN'];
 
-  // All available roles with config
+  // All available roles
   const ALL_ROLES = [
     { value: 'PATIENT', label: 'Bệnh nhân', icon: 'person', color: '#4caf50' },
     { value: 'DOCTOR', label: 'Bác sĩ', icon: 'medical-services', color: '#2196f3' },
@@ -64,11 +62,6 @@ const UserManagement = ({ navigation }) => {
     { value: 'HOSPITAL_ADMIN', label: 'Quản trị BV', icon: 'business', color: '#673ab7' },
   ];
 
-  const ROLE_CONFIG = ALL_ROLES.reduce((acc, role) => {
-    acc[role.value] = role;
-    return acc;
-  }, {});
-
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -77,42 +70,13 @@ const UserManagement = ({ navigation }) => {
     try {
       setLoading(true);
       // Lấy tất cả users (không filter status, limit lớn)
-      const response = await api.get('/users?limit=1000&status=all');
-      const userData = response.data.data || [];
-      // Filter out deleted users
-      setUsers(userData.filter(u => !u.isDeleted));
+      const response = await api.get('/users?limit=100&status=all');
+      setUsers(response.data.data || []);
     } catch (error) {
       Alert.alert('Lỗi', 'Không thể tải danh sách users: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getFilteredUsers = () => {
-    let filtered = users;
-    
-    // Filter by role
-    if (selectedRoleFilter !== 'ALL') {
-      filtered = filtered.filter(u => u.role === selectedRoleFilter);
-    }
-    
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(u => 
-        u.email?.toLowerCase().includes(query) ||
-        u.personalInfo?.firstName?.toLowerCase().includes(query) ||
-        u.personalInfo?.lastName?.toLowerCase().includes(query) ||
-        u.personalInfo?.phone?.includes(query)
-      );
-    }
-    
-    return filtered;
-  };
-
-  const getUserCountByRole = (role) => {
-    if (role === 'ALL') return users.length;
-    return users.filter(u => u.role === role).length;
   };
 
   const onRefresh = async () => {
@@ -269,87 +233,20 @@ const UserManagement = ({ navigation }) => {
     ]);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'ACTIVE': return '#4caf50';
-      case 'INACTIVE': return '#ff9800';
-      case 'SUSPENDED': return '#f44336';
-      default: return '#9e9e9e';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'ACTIVE': return 'Hoạt động';
-      case 'INACTIVE': return 'Tạm nghỉ';
-      case 'SUSPENDED': return 'Đình chỉ';
-      default: return status || 'N/A';
-    }
-  };
-
-  const filteredUsers = getFilteredUsers();
-
-  const UserItem = ({ item }) => {
-    const roleConfig = ROLE_CONFIG[item.role] || { label: item.role, icon: 'person', color: '#666' };
-    const fullName = item.personalInfo?.firstName && item.personalInfo?.lastName
-      ? `${item.personalInfo.lastName} ${item.personalInfo.firstName}`
-      : null;
-
-    return (
-      <Card style={styles.userCard}>
-        <Card.Content>
-          <View style={styles.userHeader}>
-            <View style={[styles.userAvatar, { backgroundColor: roleConfig.color + '20' }]}>
-              <MaterialIcons name={roleConfig.icon} size={24} color={roleConfig.color} />
-            </View>
-            <View style={styles.userInfo}>
-              {fullName && <Text style={styles.userFullName}>{fullName}</Text>}
-              <Text style={styles.userName}>{item.email}</Text>
-              <View style={styles.userMeta}>
-                <View style={[styles.roleBadge, { backgroundColor: roleConfig.color + '15' }]}>
-                  <Text style={[styles.roleBadgeText, { color: roleConfig.color }]}>
-                    {roleConfig.label}
-                  </Text>
-                </View>
-                <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.deleteButton}
-              onPress={() => handleDeleteUser(item._id)}
-            >
-              <MaterialIcons name="delete-outline" size={22} color="#f44336" />
-            </TouchableOpacity>
+  const UserItem = ({ item }) => (
+    <Card style={styles.userCard}>
+      <Card.Content>
+        <View style={styles.userHeader}>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{item.email}</Text>
+            <Text style={styles.userRole}>{item.role}</Text>
           </View>
-        </Card.Content>
-      </Card>
-    );
-  };
-
-  const RoleFilterChip = ({ role, label, icon, color, count }) => (
-    <TouchableOpacity
-      style={[
-        styles.filterChip,
-        selectedRoleFilter === role && styles.filterChipActive,
-        selectedRoleFilter === role && { backgroundColor: color || '#1a237e' }
-      ]}
-      onPress={() => setSelectedRoleFilter(role)}
-    >
-      {icon && (
-        <MaterialIcons 
-          name={icon} 
-          size={16} 
-          color={selectedRoleFilter === role ? '#fff' : color || '#666'} 
-        />
-      )}
-      <Text style={[
-        styles.filterChipText,
-        selectedRoleFilter === role && styles.filterChipTextActive
-      ]}>
-        {label} ({count})
-      </Text>
-    </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteUser(item._id)}>
+            <MaterialIcons name="delete" size={24} color="#F44336" />
+          </TouchableOpacity>
+        </View>
+      </Card.Content>
+    </Card>
   );
 
   return (
@@ -360,49 +257,9 @@ const UserManagement = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.title}>Quản Lý Users</Text>
         <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-          <MaterialIcons name="person-add" size={28} color="#007AFF" />
+          <MaterialIcons name="add" size={28} color="#007AFF" />
         </TouchableOpacity>
       </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={22} color="#666" />
-        <RNTextInput
-          style={styles.searchInput}
-          placeholder="Tìm kiếm theo tên, email, SĐT..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <MaterialIcons name="close" size={20} color="#666" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Role Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        <RoleFilterChip 
-          role="ALL" 
-          label="Tất cả" 
-          count={getUserCountByRole('ALL')} 
-        />
-        {ALL_ROLES.map(role => (
-          <RoleFilterChip
-            key={role.value}
-            role={role.value}
-            label={role.label}
-            icon={role.icon}
-            color={role.color}
-            count={getUserCountByRole(role.value)}
-          />
-        ))}
-      </ScrollView>
 
       {loading && !refreshing ? (
         <View style={styles.centerContent}>
@@ -410,20 +267,16 @@ const UserManagement = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={filteredUsers}
+          data={users}
           renderItem={({ item }) => <UserItem item={item} />}
           keyExtractor={(item) => item._id}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={() => (
-            <Text style={styles.resultCount}>{filteredUsers.length} người dùng</Text>
-          )}
           ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <MaterialIcons name="people-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>Không có users</Text>
+            <View style={styles.centerContent}>
+              <Text>Không có users</Text>
             </View>
           )}
         />
@@ -675,131 +528,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold'
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    height: 44,
-    borderWidth: 1,
-    borderColor: '#e0e0e0'
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: '#333'
-  },
-  filterContainer: {
-    maxHeight: 50,
-    marginTop: 12
-  },
-  filterContent: {
-    paddingHorizontal: 16
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0'
-  },
-  filterChipActive: {
-    borderColor: 'transparent'
-  },
-  filterChipText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4
-  },
-  filterChipTextActive: {
-    color: '#fff',
-    fontWeight: '500'
-  },
-  resultCount: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 8
-  },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center'
   },
   listContent: {
-    padding: 16
+    padding: 12
   },
   userCard: {
-    marginBottom: 10,
-    borderRadius: 12
+    marginBottom: 12,
+    borderRadius: 8
   },
   userHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center'
-  },
-  userAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12
   },
   userInfo: {
     flex: 1
   },
-  userFullName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333'
-  },
   userName: {
-    fontSize: 13,
-    color: '#666'
-  },
-  userMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6
-  },
-  roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10
-  },
-  roleBadgeText: {
-    fontSize: 11,
-    fontWeight: '500'
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 10
-  },
-  statusText: {
-    fontSize: 11,
-    color: '#666',
-    marginLeft: 4
-  },
-  deleteButton: {
-    padding: 8
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60
-  },
-  emptyText: {
     fontSize: 16,
-    color: '#999',
-    marginTop: 16
+    fontWeight: 'bold'
   },
   userRole: {
     fontSize: 14,
