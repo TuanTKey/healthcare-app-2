@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "check:db": "node scripts/check-db-connection.js",
     "dev": "nodemon server.js",
     "test": "jest",
     "seed": "node src/scripts/seed-prescriptions-bills.js",
@@ -19,7 +20,8 @@
     "test:all": "jest tests/ --verbose",
     "test:auth:watch": "jest tests/auth.system.test.js --watch",
     "test:user:watch": "jest tests/user.system.test.js --watch",
-    "test:coverage": "jest tests/ --coverage"
+    "test:coverage": "jest tests/ --coverage",
+    "inspect:data": "node scripts/inspect-data.js"
   },
   "keywords": [],
   "author": "",
@@ -58,6 +60,9 @@
     "rate-limit-redis": "^4.2.2",
     "speakeasy": "^2.0.0",
     "uuid": "^13.0.0"
+  },
+  "scriptsExtra": {
+    "inspect:data": "node scripts/inspect-data.js"
   },
   "jest": {
     "testEnvironment": "node",

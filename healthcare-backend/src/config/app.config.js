@@ -23,7 +23,9 @@ const envSchema = Joi.object({
   PORT: Joi.number().default(5000),
 
   // DATABASE
-  MONGO_URI: Joi.string().uri().default('mongodb://localhost:27017/healthcare_dev'),
+  MONGO_URI: Joi.string()
+    .uri()
+    .default('mongodb+srv://luanvo100404_db_user:Maicodon1@healthcare.cbkysul.mongodb.net/'),
 
   // JWT CONFIG
   JWT_ACCESS_SECRET: Joi.string().required(),

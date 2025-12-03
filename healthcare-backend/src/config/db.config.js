@@ -10,6 +10,7 @@ async function connectDatabase(retryCount = 0) {
     mongoose.set('strictQuery', true);
 
     await mongoose.connect(appConfig.db.uri, {
+      dbName: 'healthcare',
       maxPoolSize: appConfig.db.maxPoolSize,
       minPoolSize: appConfig.db.minPoolSize,
       serverSelectionTimeoutMS: 5000,
