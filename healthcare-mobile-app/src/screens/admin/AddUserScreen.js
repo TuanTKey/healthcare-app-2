@@ -28,6 +28,9 @@ const ROLES = [
   { value: 'HOSPITAL_ADMIN', label: 'Quản trị BV', icon: 'business', color: '#673ab7' },
 ];
 
+// Roles that require professional info
+const PROFESSIONAL_ROLES = ['DOCTOR', 'NURSE', 'PHARMACIST', 'LAB_TECHNICIAN'];
+
 const AddUserScreen = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
@@ -40,7 +43,11 @@ const AddUserScreen = () => {
     lastName: '',
     phone: '',
     dateOfBirth: null,
-    gender: 'MALE'
+    gender: 'MALE',
+    // Professional info for DOCTOR, NURSE, PHARMACIST, LAB_TECHNICIAN
+    licenseNumber: '',
+    specialization: '',
+    department: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -78,6 +85,21 @@ const AddUserScreen = () => {
       Alert.alert('Lỗi', 'Vui lòng chọn giới tính');
       return false;
     }
+    // Validate professional info for medical staff
+    if (PROFESSIONAL_ROLES.includes(formData.role)) {
+      if (!formData.licenseNumber.trim()) {
+        Alert.alert('Lỗi', 'Vui lòng nhập số giấy phép hành nghề');
+        return false;
+      }
+      if (!formData.specialization.trim()) {
+        Alert.alert('Lỗi', 'Vui lòng nhập chuyên khoa');
+        return false;
+      }
+      if (!formData.department.trim()) {
+        Alert.alert('Lỗi', 'Vui lòng nhập khoa/phòng làm việc');
+        return false;
+      }
+    }
     return true;
   };
 
@@ -99,6 +121,15 @@ const AddUserScreen = () => {
           gender: formData.gender
         }
       };
+
+      // Add professional info for medical staff
+      if (PROFESSIONAL_ROLES.includes(formData.role)) {
+        payload.professionalInfo = {
+          licenseNumber: formData.licenseNumber.trim(),
+          specialization: formData.specialization.trim(),
+          department: formData.department.trim()
+        };
+      }
 
       console.log('Creating user with payload:', payload);
       const response = await api.post('/users', payload);
@@ -340,7 +371,53 @@ const AddUserScreen = () => {
           </View>
         </View>
 
-        {/* Submit Button */}
+        {/* Professional Info for DOCTOR, NURSE, PHARMACIST, LAB_TECHNICIAN */}
+        {PROFESSIONAL_ROLES.includes(formData.role) && (
+          <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Thông tin chuyên môn</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Số giấy phép hành nghề *</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="badge" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="VD: GP-12345"
+                  value={formData.licenseNumber}
+                  onChangeText={(text) => handleChange('licenseNumber', text)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Chuyên khoa *</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="local-hospital" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="VD: Nội khoa, Tim mạch, Nhi khoa..."
+                  value={formData.specialization}
+                  onChangeText={(text) => handleChange('specialization', text)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Khoa/Phòng làm việc *</Text>
+              <View style={styles.inputContainer}>
+                <MaterialIcons name="business" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="VD: Khoa Nội, Khoa Ngoại..."
+                  value={formData.department}
+                  onChangeText={(text) => handleChange('department', text)}
+                />
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Submit Button */
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
