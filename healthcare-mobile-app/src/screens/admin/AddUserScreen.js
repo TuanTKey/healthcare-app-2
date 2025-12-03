@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../services/api';
@@ -37,9 +38,12 @@ const AddUserScreen = () => {
     role: 'PATIENT',
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    dateOfBirth: null,
+    gender: 'MALE'
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -66,6 +70,14 @@ const AddUserScreen = () => {
       Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
       return false;
     }
+    if (!formData.dateOfBirth) {
+      Alert.alert('Lỗi', 'Vui lòng chọn ngày sinh');
+      return false;
+    }
+    if (!formData.gender) {
+      Alert.alert('Lỗi', 'Vui lòng chọn giới tính');
+      return false;
+    }
     return true;
   };
 
@@ -82,7 +94,9 @@ const AddUserScreen = () => {
         personalInfo: {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
-          phone: formData.phone.trim()
+          phone: formData.phone.trim(),
+          dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
+          gender: formData.gender
         }
       };
 
@@ -271,6 +285,59 @@ const AddUserScreen = () => {
               />
             </View>
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Ngày sinh *</Text>
+            <TouchableOpacity 
+              style={styles.inputContainer}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <MaterialIcons name="calendar-today" size={20} color="#666" style={styles.inputIcon} />
+              <Text style={[styles.input, { color: formData.dateOfBirth ? '#333' : '#999' }]}>
+                {formData.dateOfBirth 
+                  ? formData.dateOfBirth.toLocaleDateString('vi-VN')
+                  : 'Chọn ngày sinh'}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={formData.dateOfBirth || new Date(2000, 0, 1)}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                maximumDate={new Date()}
+                minimumDate={new Date(1900, 0, 1)}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    handleChange('dateOfBirth', selectedDate);
+                  }
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Giới tính *</Text>
+            <View style={styles.genderContainer}>
+              {[{value: 'MALE', label: 'Nam'}, {value: 'FEMALE', label: 'Nữ'}, {value: 'OTHER', label: 'Khác'}].map((gender) => (
+                <TouchableOpacity
+                  key={gender.value}
+                  style={[
+                    styles.genderButton,
+                    formData.gender === gender.value && styles.genderButtonActive
+                  ]}
+                  onPress={() => handleChange('gender', gender.value)}
+                >
+                  <Text style={[
+                    styles.genderButtonText,
+                    formData.gender === gender.value && styles.genderButtonTextActive
+                  ]}>
+                    {gender.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
         {/* Submit Button */}
@@ -432,6 +499,31 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 30
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  genderButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f8f9fa',
+    alignItems: 'center'
+  },
+  genderButtonActive: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1a237e'
+  },
+  genderButtonText: {
+    fontSize: 14,
+    color: '#666'
+  },
+  genderButtonTextActive: {
+    color: '#1a237e',
+    fontWeight: '600'
   }
 });
 
