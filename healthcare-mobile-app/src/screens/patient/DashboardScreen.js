@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { MaterialIcons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import Card from '../../components/common/Card';
 import api from '../../services/api';
 
@@ -15,6 +17,7 @@ const DashboardScreen = ({ navigation }) => {
     { icon: 'receipt', label: 'Hóa đơn', value: '0', color: '#FF9800', screen: 'Billing', params: {} },
     { icon: 'check-circle', label: 'Đã khám', value: '0', color: '#9C27B0', screen: 'Appointments', params: { tab: 'completed' } },
   ]);
+  const [recentActivities, setRecentActivities] = useState([]);
 
   const quickActions = [
     { 
@@ -52,6 +55,7 @@ const DashboardScreen = ({ navigation }) => {
       let completedAppointmentCount = 0;
       let prescriptionCount = 0;
       let billCount = 0;
+      let activities = [];
 
       // Fetch appointments - only pending (not COMPLETED or CANCELLED)
       try {
@@ -79,6 +83,22 @@ const DashboardScreen = ({ navigation }) => {
         
         console.log('📅 Pending appointments:', appointmentCount);
         console.log('✅ Completed appointments:', completedAppointmentCount);
+
+        // Add appointments to activities
+        allAppointments.slice(0, 3).forEach(apt => {
+          const doctorName = apt.doctorId?.personalInfo 
+            ? `BS. ${apt.doctorId.personalInfo.lastName} ${apt.doctorId.personalInfo.firstName}`
+            : 'Bác sĩ';
+          activities.push({
+            type: 'appointment',
+            icon: 'event',
+            color: apt.status === 'COMPLETED' ? '#9C27B0' : '#4CAF50',
+            title: `Lịch hẹn với ${doctorName}`,
+            subtitle: apt.reason || 'Khám bệnh',
+            time: apt.appointmentDate,
+            status: apt.status
+          });
+        });
       } catch (err) {
         console.warn('⚠️ Failed to fetch appointments:', err.message);
       }
@@ -88,15 +108,33 @@ const DashboardScreen = ({ navigation }) => {
         const prescriptionsRes = await api.get(`/prescriptions/patients/${user._id}/prescriptions`);
         console.log('💊 Prescriptions response:', prescriptionsRes.data);
         
-        // Response: { success, data: { prescriptions: [...], pagination: {...} } }
+        let prescriptions = [];
         if (prescriptionsRes.data?.data?.prescriptions && Array.isArray(prescriptionsRes.data.data.prescriptions)) {
-          prescriptionCount = prescriptionsRes.data.data.prescriptions.length;
+          prescriptions = prescriptionsRes.data.data.prescriptions;
+          prescriptionCount = prescriptions.length;
         } else if (prescriptionsRes.data?.data?.pagination?.total) {
           prescriptionCount = prescriptionsRes.data.data.pagination.total;
         } else if (prescriptionsRes.data?.data && Array.isArray(prescriptionsRes.data.data)) {
-          prescriptionCount = prescriptionsRes.data.data.length;
+          prescriptions = prescriptionsRes.data.data;
+          prescriptionCount = prescriptions.length;
         }
         console.log('💊 Prescriptions count:', prescriptionCount);
+
+        // Add prescriptions to activities
+        prescriptions.slice(0, 2).forEach(rx => {
+          const doctorName = rx.doctorId?.personalInfo 
+            ? `BS. ${rx.doctorId.personalInfo.lastName} ${rx.doctorId.personalInfo.firstName}`
+            : 'Bác sĩ';
+          activities.push({
+            type: 'prescription',
+            icon: 'local-pharmacy',
+            color: '#2196F3',
+            title: `Đơn thuốc từ ${doctorName}`,
+            subtitle: `${rx.medications?.length || 0} loại thuốc`,
+            time: rx.createdAt || rx.issueDate,
+            status: rx.status
+          });
+        });
       } catch (err) {
         console.warn('⚠️ Failed to fetch prescriptions:', err.message);
       }
@@ -106,18 +144,38 @@ const DashboardScreen = ({ navigation }) => {
         const billsRes = await api.get(`/bills/patients/${user._id}/bills`);
         console.log('💰 Bills response:', billsRes.data);
         
-        // Response: { success, data: { docs: [...], totalDocs, ... } } (paginated)
+        let bills = [];
         if (billsRes.data?.data?.docs && Array.isArray(billsRes.data.data.docs)) {
-          billCount = billsRes.data.data.docs.length;
+          bills = billsRes.data.data.docs;
+          billCount = bills.length;
         } else if (billsRes.data?.data?.totalDocs) {
           billCount = billsRes.data.data.totalDocs;
         } else if (billsRes.data?.data && Array.isArray(billsRes.data.data)) {
-          billCount = billsRes.data.data.length;
+          bills = billsRes.data.data;
+          billCount = bills.length;
         }
         console.log('💰 Bills count:', billCount);
+
+        // Add bills to activities
+        bills.slice(0, 2).forEach(bill => {
+          const amount = bill.grandTotal || bill.totalAmount || 0;
+          activities.push({
+            type: 'bill',
+            icon: 'receipt',
+            color: bill.status === 'PAID' ? '#4CAF50' : '#FF9800',
+            title: `Hóa đơn ${bill.billNumber || bill.billId}`,
+            subtitle: `${amount.toLocaleString('vi-VN')}đ - ${bill.status === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}`,
+            time: bill.createdAt || bill.issueDate,
+            status: bill.status
+          });
+        });
       } catch (err) {
         console.warn('⚠️ Failed to fetch bills:', err.message);
       }
+
+      // Sort activities by time (newest first)
+      activities.sort((a, b) => new Date(b.time) - new Date(a.time));
+      setRecentActivities(activities.slice(0, 5));
 
       // Update stats
       setStats(prevStats => [
@@ -218,28 +276,53 @@ const DashboardScreen = ({ navigation }) => {
           <Text variant="titleMedium" style={styles.sectionTitle}>
             Hoạt động gần đây
           </Text>
-          <View style={styles.activityItem}>
-            <MaterialIcons name="event" size={20} color="#4CAF50" />
-            <View style={styles.activityText}>
-              <Text variant="bodyMedium">Lịch hẹn với BS. Nguyễn Văn A</Text>
-              <Text variant="bodySmall" style={styles.activityTime}>
-                Hôm nay, 14:30
-              </Text>
+          {recentActivities.length === 0 ? (
+            <View style={styles.emptyActivity}>
+              <MaterialIcons name="history" size={40} color="#ccc" />
+              <Text style={styles.emptyText}>Chưa có hoạt động nào</Text>
             </View>
-          </View>
-          <View style={styles.activityItem}>
-            <MaterialIcons name="local-pharmacy" size={20} color="#2196F3" />
-            <View style={styles.activityText}>
-              <Text variant="bodyMedium">Đơn thuốc mới</Text>
-              <Text variant="bodySmall" style={styles.activityTime}>
-                2 ngày trước
-              </Text>
-            </View>
-          </View>
+          ) : (
+            recentActivities.map((activity, index) => (
+              <View key={index} style={styles.activityItem}>
+                <MaterialIcons name={activity.icon} size={20} color={activity.color} />
+                <View style={styles.activityText}>
+                  <Text variant="bodyMedium">{activity.title}</Text>
+                  <Text variant="bodySmall" style={styles.activitySubtitle}>
+                    {activity.subtitle}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.activityTime}>
+                    {activity.time ? formatActivityTime(activity.time) : ''}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </Card.Content>
       </Card>
     </ScrollView>
   );
+};
+
+// Helper function để format thời gian
+const formatActivityTime = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return `Hôm nay, ${format(date, 'HH:mm', { locale: vi })}`;
+    } else if (diffDays === 1) {
+      return `Hôm qua, ${format(date, 'HH:mm', { locale: vi })}`;
+    } else if (diffDays < 7) {
+      return `${diffDays} ngày trước`;
+    } else {
+      return format(date, 'dd/MM/yyyy', { locale: vi });
+    }
+  } catch (e) {
+    return '';
+  }
 };
 
 const styles = StyleSheet.create({
