@@ -1,5 +1,6 @@
 // src/models/bill.model.js
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 
 const billSchema = new mongoose.Schema({
   billId: {
@@ -233,5 +234,8 @@ billSchema.statics.findByDateRange = function(startDate, endDate) {
     }
   }).populate('patientId');
 };
+
+// Apply paginate plugin
+billSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Bill', billSchema);
