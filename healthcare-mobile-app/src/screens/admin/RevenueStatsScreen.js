@@ -39,12 +39,26 @@ const RevenueStatsScreen = ({ navigation }) => {
     try {
       setLoading(true);
 
-      // Fetch all bills
-      const billsRes = await api.get('/billing/bills', {
+      // Fetch all bills - use correct endpoint /bills
+      const billsRes = await api.get('/bills', {
         params: { limit: 1000 }
       });
+      
+      console.log('📊 Bills API Response:', JSON.stringify(billsRes.data, null, 2));
 
-      const bills = billsRes.data?.data?.docs || billsRes.data?.data || [];
+      // Extract bills from response - structure is { success, data: { data: [], pagination: {} } }
+      let bills = [];
+      if (Array.isArray(billsRes.data?.data?.data)) {
+        bills = billsRes.data.data.data;
+      } else if (Array.isArray(billsRes.data?.data?.docs)) {
+        bills = billsRes.data.data.docs;
+      } else if (Array.isArray(billsRes.data?.data)) {
+        bills = billsRes.data.data;
+      } else {
+        bills = [];
+      }
+      
+      console.log('📊 Extracted bills:', bills.length, 'items');
 
       // Calculate date range
       const now = new Date();
@@ -72,28 +86,29 @@ const RevenueStatsScreen = ({ navigation }) => {
         return billDate >= startDate && billDate <= now;
       });
 
-      // Calculate stats
+      // Calculate stats - use correct status names: ISSUED, PARTIAL, PAID
       const paidBills = filteredBills.filter(b => b.status === 'PAID');
       const pendingBills = filteredBills.filter(b => 
-        b.status === 'PENDING' || b.status === 'PARTIAL'
+        b.status === 'ISSUED' || b.status === 'PARTIAL' || b.status === 'DRAFT'
       );
 
+      // Use grandTotal (correct field from bill schema)
       const totalRevenue = paidBills.reduce((sum, bill) => 
-        sum + (bill.finalAmount || bill.amount || 0), 0
+        sum + (bill.grandTotal || bill.totalAmount || 0), 0
       );
 
       const pendingAmount = pendingBills.reduce((sum, bill) => 
-        sum + (bill.finalAmount || bill.amount || 0), 0
+        sum + (bill.balanceDue || bill.grandTotal || 0), 0
       );
 
-      // Group revenue by day
+      // Group revenue by day - use grandTotal
       const revenueByDay = {};
       paidBills.forEach(bill => {
-        const date = new Date(bill.paidAt || bill.createdAt).toLocaleDateString('vi-VN');
+        const date = new Date(bill.paidAt || bill.updatedAt || bill.createdAt).toLocaleDateString('vi-VN');
         if (!revenueByDay[date]) {
           revenueByDay[date] = 0;
         }
-        revenueByDay[date] += (bill.finalAmount || bill.amount || 0);
+        revenueByDay[date] += (bill.grandTotal || bill.totalAmount || 0);
       });
 
       // Convert to array for chart
@@ -102,12 +117,13 @@ const RevenueStatsScreen = ({ navigation }) => {
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(-14); // Last 14 days
 
-      // Revenue by status
+      // Revenue by status - use correct status names from schema
       const revenueByStatus = {
         PAID: paidBills.length,
-        PENDING: pendingBills.filter(b => b.status === 'PENDING').length,
-        PARTIAL: pendingBills.filter(b => b.status === 'PARTIAL').length,
-        CANCELLED: filteredBills.filter(b => b.status === 'CANCELLED').length
+        ISSUED: filteredBills.filter(b => b.status === 'ISSUED').length,
+        PARTIAL: filteredBills.filter(b => b.status === 'PARTIAL').length,
+        DRAFT: filteredBills.filter(b => b.status === 'DRAFT').length,
+        OVERDUE: filteredBills.filter(b => b.status === 'OVERDUE').length
       };
 
       setStats({
@@ -231,16 +247,18 @@ const RevenueStatsScreen = ({ navigation }) => {
 
     const colors = {
       PAID: '#4CAF50',
-      PENDING: '#FF9800',
+      ISSUED: '#FF9800',
       PARTIAL: '#2196F3',
-      CANCELLED: '#F44336'
+      DRAFT: '#9E9E9E',
+      OVERDUE: '#F44336'
     };
 
     const labels = {
       PAID: 'Đã thanh toán',
-      PENDING: 'Chờ thanh toán',
+      ISSUED: 'Chờ thanh toán',
       PARTIAL: 'Thanh toán một phần',
-      CANCELLED: 'Đã hủy'
+      DRAFT: 'Nháp',
+      OVERDUE: 'Quá hạn'
     };
 
     return (
@@ -367,7 +385,7 @@ const RevenueStatsScreen = ({ navigation }) => {
             <View style={[styles.quickStat, { backgroundColor: '#FFF3E0' }]}>
               <MaterialIcons name="schedule" size={24} color="#FF9800" />
               <Text style={[styles.quickStatValue, { color: '#FF9800' }]}>
-                {stats.revenueByStatus.PENDING || 0}
+                {stats.revenueByStatus.ISSUED || 0}
               </Text>
               <Text style={styles.quickStatLabel}>Chờ TT</Text>
             </View>
@@ -381,9 +399,9 @@ const RevenueStatsScreen = ({ navigation }) => {
             <View style={[styles.quickStat, { backgroundColor: '#FFEBEE' }]}>
               <MaterialIcons name="cancel" size={24} color="#F44336" />
               <Text style={[styles.quickStatValue, { color: '#F44336' }]}>
-                {stats.revenueByStatus.CANCELLED || 0}
+                {stats.revenueByStatus.OVERDUE || 0}
               </Text>
-              <Text style={styles.quickStatLabel}>Đã huỷ</Text>
+              <Text style={styles.quickStatLabel}>Quá hạn</Text>
             </View>
           </View>
 

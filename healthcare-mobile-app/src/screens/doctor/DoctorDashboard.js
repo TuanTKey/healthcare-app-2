@@ -113,26 +113,41 @@ const DoctorDashboard = () => {
         console.warn('Could not fetch appointments:', err.message);
       }
 
-      // Lấy số lượng bệnh nhân
+      // Lấy số lượng bệnh nhân - chỉ đếm bệnh nhân có đầy đủ thông tin
       let totalPatients = 0;
       try {
-        const patientsRes = await api.get('/patients?limit=100');
+        const patientsRes = await api.get('/patients?limit=1000');
         console.log('📊 Patients Response:', JSON.stringify(patientsRes.data));
         
-        // Thử các cấu trúc response khác nhau
-        if (patientsRes.data?.data?.pagination?.totalPatients) {
-          totalPatients = patientsRes.data.data.pagination.totalPatients;
-        } else if (patientsRes.data?.data?.pagination?.total) {
-          totalPatients = patientsRes.data.data.pagination.total;
-        } else if (patientsRes.data?.pagination?.totalPatients) {
-          totalPatients = patientsRes.data.pagination.totalPatients;
-        } else if (patientsRes.data?.pagination?.total) {
-          totalPatients = patientsRes.data.pagination.total;
-        } else if (Array.isArray(patientsRes.data?.data?.patients)) {
-          totalPatients = patientsRes.data.data.patients.length;
+        let patientsData = [];
+        if (patientsRes.data?.data?.patients) {
+          patientsData = patientsRes.data.data.patients;
         } else if (Array.isArray(patientsRes.data?.data)) {
-          totalPatients = patientsRes.data.data.length;
+          patientsData = patientsRes.data.data;
         }
+        
+        // Lọc chỉ đếm bệnh nhân có đầy đủ thông tin và không bị xoá
+        const validPatients = patientsData.filter(patient => {
+          // Kiểm tra không bị xoá
+          if (patient.isDeleted || patient.userId?.isDeleted) {
+            return false;
+          }
+          
+          // Lấy thông tin cá nhân từ các cấu trúc khác nhau
+          const userInfo = patient.userId?.personalInfo || patient.personalInfo || patient.user?.personalInfo || {};
+          const firstName = userInfo.firstName || patient.firstName || '';
+          const lastName = userInfo.lastName || patient.lastName || '';
+          const dateOfBirth = userInfo.dateOfBirth || patient.dateOfBirth;
+          
+          // Chỉ đếm bệnh nhân có đầy đủ họ tên và ngày sinh
+          const hasName = firstName.trim() && lastName.trim();
+          const hasAge = !!dateOfBirth;
+          
+          return hasName && hasAge;
+        });
+        
+        totalPatients = validPatients.length;
+        console.log('📋 Valid patients count:', totalPatients, '/', patientsData.length);
       } catch (err) {
         console.warn('Could not fetch patients count:', err.message);
       }

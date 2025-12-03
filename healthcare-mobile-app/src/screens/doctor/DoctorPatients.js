@@ -26,7 +26,7 @@ const DoctorPatients = ({ navigation }) => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/patients?limit=100');
+      const response = await api.get('/patients?limit=1000');
       
       console.log('📊 Patients API Response:', JSON.stringify(response.data, null, 2));
       
@@ -41,7 +41,29 @@ const DoctorPatients = ({ navigation }) => {
 
       console.log('📋 First patient structure:', data[0] ? JSON.stringify(data[0], null, 2) : 'No patients');
 
-      setPatients(data);
+      // Lọc chỉ lấy bệnh nhân có đầy đủ thông tin và không bị xoá
+      const validPatients = data.filter(patient => {
+        // Kiểm tra không bị xoá
+        if (patient.isDeleted || patient.userId?.isDeleted) {
+          return false;
+        }
+        
+        // Lấy thông tin cá nhân từ các cấu trúc khác nhau
+        const userInfo = patient.userId?.personalInfo || patient.personalInfo || patient.user?.personalInfo || {};
+        const firstName = userInfo.firstName || patient.firstName || '';
+        const lastName = userInfo.lastName || patient.lastName || '';
+        const dateOfBirth = userInfo.dateOfBirth || patient.dateOfBirth;
+        
+        // Chỉ lấy bệnh nhân có đầy đủ họ tên và ngày sinh
+        const hasName = firstName.trim() && lastName.trim();
+        const hasAge = !!dateOfBirth;
+        
+        return hasName && hasAge;
+      });
+
+      console.log('📋 Valid patients:', validPatients.length, '/', data.length);
+
+      setPatients(validPatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
     } finally {
