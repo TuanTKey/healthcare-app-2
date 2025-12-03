@@ -25,7 +25,7 @@ const envSchema = Joi.object({
   // DATABASE
   MONGO_URI: Joi.string()
     .uri()
-    .default('mongodb+srv://luanvo100404_db_user:Maicodon1@healthcare.cbkysul.mongodb.net/'),
+    .default('mongodb+srv://phuocdai2004:phuocdai2004@healthcare.r3m7ew5.mongodb.net/healthcare_db?retryWrites=true&w=majority'),
 
   // JWT CONFIG
   JWT_ACCESS_SECRET: Joi.string().required(),
